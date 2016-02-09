@@ -22,7 +22,7 @@ type pkgsinfoStore interface {
 
 type manifestStore interface {
 	AllManifests() ([]*models.Manifest, error)
-	// Manifest(name string) (*models.Manifest, error)
+	Manifest(name string) (*models.Manifest, error)
 }
 
 // GitRepo is a munki repo

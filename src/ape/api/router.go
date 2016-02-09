@@ -11,5 +11,6 @@ func router(conf *config) http.Handler {
 	router.GET("/api/packages", handlePackagesList(conf.db))
 	router.GET("/api/packages/:name", handlePackagesShow(conf.db))
 	router.GET("/api/manifests", handleManifestsList(conf.db))
+	router.GET("/api/manifests/:name", handleManifestsShow(conf.db))
 	return router
 }

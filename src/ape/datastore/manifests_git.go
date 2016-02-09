@@ -41,3 +41,18 @@ func (r *GitRepo) AllManifests() ([]*models.Manifest, error) {
 	}
 	return manifestList, nil
 }
+
+// Manifest returns a single manifest from repo
+func (r *GitRepo) Manifest(name string) (*models.Manifest, error) {
+	m := &manifests{}
+	err := m.load(r.Path)
+	if err != nil {
+		return nil, err
+	}
+	// update index
+	r.updateIndex(m)
+	if _, ok := r.indexManifests[name]; !ok {
+		return nil, nil
+	}
+	return r.indexManifests[name], nil
+}

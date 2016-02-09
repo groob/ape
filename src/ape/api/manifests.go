@@ -24,3 +24,20 @@ func handleManifestsList(db datastore.Datastore) httprouter.Handle {
 		return
 	}
 }
+
+func handleManifestsShow(db datastore.Datastore) httprouter.Handle {
+	return func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		name := ps.ByName("name")
+		manifest, err := db.Manifest(name)
+		if err != nil {
+			log.Println(err)
+		}
+		view := manifest.View()
+		jsn, err := view.ToJSON()
+		if err != nil {
+			log.Println(err)
+		}
+		rw.Write(jsn)
+		return
+	}
+}

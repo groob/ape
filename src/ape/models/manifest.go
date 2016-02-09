@@ -8,7 +8,7 @@ import (
 
 // Manifest represents the structure of a munki manifest plist
 type Manifest struct {
-	Filename          string   `plist:"-",json:"-"`
+	Filename          string   `plist:"-" json:"-"`
 	Catalogs          []string `plist:"catalogs" json:"catalogs"`
 	DisplayName       string   `plist:"display_name" json:"display_name"`
 	IncludedManifests []string `plist:"included_manifests" json:"included_manifests"`
