@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	repo := api.GitRepo("repo/pkgsinfo")
+	repo := api.GitRepo("repo")
 	apiHandler := api.NewServer(repo)
 	http.Handle("/", apiHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))

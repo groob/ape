@@ -13,7 +13,7 @@ var errNoContent = errors.New("No Content")
 
 // PkgsInfo represents the structure of a pkgsinfo file
 type PkgsInfo struct {
-	Filename              string        `json:"-"`
+	Filename              string        `plist:"-",json:"-"`
 	Metadata              metadata      `plist:"_metadata" json:"_metadata"`
 	Autoremove            bool          `plist:"autoremove" json:"autoremobe"`
 	Catalogs              []string      `plist:"catalogs" json:"catalogs"`
@@ -75,7 +75,7 @@ func (p *PkgsInfo) View() *View {
 	return &view
 }
 
-type defaultView struct {
+type defaultPkgsInfoView struct {
 	Name        string   `json:"name"`
 	DisplayName string   `json:"display_name"`
 	Catalogs    []string `json:"catalogs"`
@@ -97,7 +97,7 @@ func (v *View) ToJSON() ([]byte, error) {
 func PkgsInfoList(pkgsinfos []*PkgsInfo) *View {
 	var viewDefault = make(View, len(pkgsinfos))
 	for _, info := range pkgsinfos {
-		viewDefault[info.Filename] = &defaultView{
+		viewDefault[info.Filename] = &defaultPkgsInfoView{
 			Name:        info.Name,
 			DisplayName: info.DisplayName,
 			Catalogs:    info.Catalogs,
