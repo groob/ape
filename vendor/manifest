@@ -1,0 +1,17 @@
+{
+	"version": 0,
+	"dependencies": [
+		{
+			"importpath": "github.com/groob/plist",
+			"repository": "https://github.com/groob/plist",
+			"revision": "73a12776249aff24e4d0844a5d2adcb636df7e71",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/julienschmidt/httprouter",
+			"repository": "https://github.com/julienschmidt/httprouter",
+			"revision": "2c34ec888a7359c0750064e0a4c8df360806c255",
+			"branch": "master"
+		}
+	]
+}
