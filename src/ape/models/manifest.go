@@ -37,10 +37,23 @@ func (m *Manifest) View() *View {
 	return &view
 }
 
-// ManifestList returns a default view in api response
-func ManifestList(manifests []*Manifest) *View {
+// ManifestListx returns a default view in api response
+func ManifestListx(manifests []*Manifest) *View {
 	var viewDefault = make(View, len(manifests))
 	for _, info := range manifests {
+		viewDefault[info.Filename] = info
+
+	}
+	return &viewDefault
+}
+
+// ManifestList represents a slice of manifests
+type ManifestList []*Manifest
+
+// View returns a view
+func (l ManifestList) View() *View {
+	var viewDefault = make(View, len(l))
+	for _, info := range l {
 		viewDefault[info.Filename] = info
 
 	}

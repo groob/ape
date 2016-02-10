@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 )
 
+// ErrExists file already exists
+var ErrExists = errors.New("Resource already exists")
+
 // Datastore is an interface around munki storage
 type Datastore interface {
 	pkgsinfoStore
@@ -21,7 +24,7 @@ type pkgsinfoStore interface {
 }
 
 type manifestStore interface {
-	AllManifests() ([]*models.Manifest, error)
+	AllManifests() (*models.ManifestList, error)
 	Manifest(name string) (*models.Manifest, error)
 	NewManifest(name string) (*models.Manifest, error)
 	SaveManifest(manifest *models.Manifest) error
@@ -47,7 +50,7 @@ func (r *GitRepo) updateIndex(l loader) {
 		manifests := l.(*manifests)
 		r.indexManifests = make(map[string]*models.Manifest, len(*manifests))
 		for _, info := range *manifests {
-			v := models.Manifest(info)
+			v := models.Manifest(*info)
 			r.indexManifests[info.Filename] = &v
 		}
 	}

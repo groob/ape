@@ -2,8 +2,8 @@ package api
 
 import (
 	"ape/datastore"
-	"ape/models"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -15,15 +15,11 @@ func handleManifestsList(db datastore.Datastore) httprouter.Handle {
 	return func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		manifests, err := db.AllManifests()
 		if err != nil {
-			log.Fatal(err)
+			respondError(rw, http.StatusInternalServerError,
+				fmt.Errorf("Failed to fetch manifest list from the datastore: %v", err))
+			return
 		}
-		view := models.ManifestList(manifests)
-		jsn, err := view.ToJSON()
-		if err != nil {
-			log.Fatal(err)
-		}
-		rw.Write(jsn)
-		return
+		respondOK(rw, manifests)
 	}
 }
 
@@ -32,15 +28,11 @@ func handleManifestsShow(db datastore.Datastore) httprouter.Handle {
 		name := ps.ByName("name")
 		manifest, err := db.Manifest(name)
 		if err != nil {
-			log.Println(err)
+			respondError(rw, http.StatusInternalServerError,
+				fmt.Errorf("Failed to fetch manifest from the datastore: %v", err))
+			return
 		}
-		view := manifest.View()
-		jsn, err := view.ToJSON()
-		if err != nil {
-			log.Println(err)
-		}
-		rw.Write(jsn)
-		return
+		respondOK(rw, manifest)
 	}
 }
 
@@ -61,14 +53,22 @@ func handleManifestsCreate(db datastore.Datastore) httprouter.Handle {
 		}
 
 		manifest, err := db.NewManifest(f.Name)
-		if err != nil {
-			log.Println(err)
+		switch err {
+		case nil:
+			break
+		case datastore.ErrExists:
+			respondError(rw, http.StatusConflict, err)
+			return
+		default:
+			respondError(rw, http.StatusInternalServerError,
+				fmt.Errorf("Failed to create new manifest: %v", err))
 			return
 		}
 		if err := db.SaveManifest(manifest); err != nil {
-			log.Println(err)
+			respondError(rw, http.StatusInternalServerError,
+				fmt.Errorf("Failed to save manifest: %v", err))
 			return
 		}
-		return
+		respondCreated(rw, manifest, "")
 	}
 }
