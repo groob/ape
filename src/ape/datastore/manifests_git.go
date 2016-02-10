@@ -87,3 +87,13 @@ func (r *GitRepo) SaveManifest(manifest *models.Manifest) error {
 	}
 	return nil
 }
+
+// DeleteManifest ...
+func (r *GitRepo) DeleteManifest(name string) error {
+	manifestPath := fmt.Sprintf("%v/manifests/%v", r.Path, name)
+	err := os.Remove(manifestPath)
+	if err != nil {
+		return err
+	}
+	return nil
+}

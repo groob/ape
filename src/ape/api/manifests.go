@@ -82,3 +82,16 @@ func handleManifestsCreate(db datastore.Datastore) httprouter.Handle {
 		respondCreated(rw, manifest, "")
 	}
 }
+
+func handleManifestsDelete(db datastore.Datastore) httprouter.Handle {
+	return func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		name := ps.ByName("name")
+		err := db.DeleteManifest(name)
+		if err != nil {
+			respondError(rw, http.StatusInternalServerError,
+				fmt.Errorf("Failed to delete manifest from the datastore: %v", err))
+			return
+		}
+		rw.WriteHeader(http.StatusNoContent)
+	}
+}

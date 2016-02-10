@@ -28,6 +28,7 @@ type manifestStore interface {
 	Manifest(name string) (*models.Manifest, error)
 	NewManifest(name string) (*models.Manifest, error)
 	SaveManifest(manifest *models.Manifest) error
+	DeleteManifest(name string) error
 }
 
 // GitRepo is a munki repo
