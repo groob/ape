@@ -69,7 +69,6 @@ func handleManifestsCreate(db datastore.Datastore) httprouter.Handle {
 			log.Println(err)
 			return
 		}
-
 		return
 	}
 }
