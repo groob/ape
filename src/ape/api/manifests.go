@@ -2,6 +2,7 @@ package api
 
 import (
 	"ape/datastore"
+	"ape/models"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -39,7 +40,8 @@ func handleManifestsShow(db datastore.Datastore) httprouter.Handle {
 func handleManifestsCreate(db datastore.Datastore) httprouter.Handle {
 	return func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		f := &struct {
-			Name string `json:"name"`
+			Name     string           `json:"name"`
+			Manifest *models.Manifest `json:"manifest"`
 		}{}
 		err := json.NewDecoder(r.Body).Decode(f)
 		switch err {
@@ -51,8 +53,15 @@ func handleManifestsCreate(db datastore.Datastore) httprouter.Handle {
 		default:
 			log.Println(err)
 		}
+		var manifest *models.Manifest
 
-		manifest, err := db.NewManifest(f.Name)
+		// If the body contains a valid manifest, create it
+		if f.Manifest != nil {
+			manifest = f.Manifest
+			manifest.Filename = f.Name
+		}
+
+		_, err = db.NewManifest(f.Name)
 		switch err {
 		case nil:
 			break
@@ -64,6 +73,7 @@ func handleManifestsCreate(db datastore.Datastore) httprouter.Handle {
 				fmt.Errorf("Failed to create new manifest: %v", err))
 			return
 		}
+
 		if err := db.SaveManifest(manifest); err != nil {
 			respondError(rw, http.StatusInternalServerError,
 				fmt.Errorf("Failed to save manifest: %v", err))
