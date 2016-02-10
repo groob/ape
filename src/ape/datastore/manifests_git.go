@@ -2,9 +2,14 @@ package datastore
 
 import (
 	"ape/models"
+	"errors"
 	"fmt"
+	"log"
+	"os"
 	"path/filepath"
 )
+
+var ErrExists = errors.New("Already Exists")
 
 type manifests []models.Manifest
 
@@ -55,4 +60,38 @@ func (r *GitRepo) Manifest(name string) (*models.Manifest, error) {
 		return nil, nil
 	}
 	return r.indexManifests[name], nil
+}
+
+// NewManifest returns a single manifest from repo
+func (r *GitRepo) NewManifest(name string) (*models.Manifest, error) {
+	manifest := &models.Manifest{
+		Filename: name,
+	}
+	manifestPath := fmt.Sprintf("%v/manifests/%v", r.Path, manifest.Filename)
+	// check if exists
+	if _, err := os.Stat(manifestPath); err == nil {
+		return nil, ErrExists
+	}
+	// create new
+	f, err := os.Create(manifestPath)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer f.Close()
+	return manifest, nil
+}
+
+// SaveManifest saves a manifest to the datastore
+func (r *GitRepo) SaveManifest(manifest *models.Manifest) error {
+	manifestPath := fmt.Sprintf("%v/manifests/%v", r.Path, manifest.Filename)
+	file, err := os.OpenFile(manifestPath, os.O_WRONLY, 0755)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if err := manifest.Encode(file); err != nil {
+		return err
+	}
+	return nil
 }
