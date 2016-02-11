@@ -195,14 +195,24 @@ func handleManifestsUpdate(db datastore.Datastore) httprouter.Handle {
 
 // use manifestPayload to check for nil values during an update
 type manifestPayload struct {
-	Filename          *string   `json:"name"`
-	Catalogs          *[]string `json:"catalogs,omitempty"`
-	DisplayName       *string   `json:"display_name,omitempty"`
-	IncludedManifests *[]string `json:"included_manifests,omitempty"`
+	Filename          *string      `json:"name"`
+	Catalogs          *[]string    `json:"catalogs,omitempty"`
+	DisplayName       *string      `json:"display_name,omitempty"`
+	IncludedManifests *[]string    `json:"included_manifests,omitempty"`
+	Notes             *string      `json:"notes,omitempty"`
+	User              *string      `json:"user,omitempty"`
+	ConditionalItems  *[]condition `json:"conditional_items,omitempty"`
+	*manifestItems
+}
+
+type condition struct {
+	Condition *string `plist:"condition" json:"condition"`
+	*manifestItems
+}
+
+type manifestItems struct {
 	OptionalInstalls  *[]string `json:"optional_installs,omitempty"`
 	ManagedInstalls   *[]string `json:"managed_installs,omitempty"`
 	ManagedUninstalls *[]string `json:"managed_uninstalls,omitempty"`
 	ManagedUpdates    *[]string `json:"managed_updates,omitempty"`
-	Notes             *string   `json:"notes,omitempty"`
-	User              *string   `json:"user,omitempty"`
 }
