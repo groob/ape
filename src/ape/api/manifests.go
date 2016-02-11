@@ -153,6 +153,34 @@ func handleManifestsUpdate(db datastore.Datastore) httprouter.Handle {
 			manifest.DisplayName = *payload.DisplayName
 		}
 
+		if payload.IncludedManifests != nil {
+			manifest.IncludedManifests = *payload.IncludedManifests
+		}
+
+		if payload.OptionalInstalls != nil {
+			manifest.OptionalInstalls = *payload.OptionalInstalls
+		}
+
+		if payload.ManagedInstalls != nil {
+			manifest.ManagedInstalls = *payload.ManagedInstalls
+		}
+
+		if payload.ManagedUninstalls != nil {
+			manifest.ManagedUninstalls = *payload.ManagedUninstalls
+		}
+
+		if payload.ManagedUpdates != nil {
+			manifest.ManagedUpdates = *payload.ManagedUpdates
+		}
+
+		if payload.Notes != nil {
+			manifest.Notes = *payload.Notes
+		}
+
+		if payload.User != nil {
+			manifest.User = *payload.User
+		}
+
 		// no save
 		if err := db.SaveManifest(manifest); err != nil {
 			respondError(rw, http.StatusInternalServerError,
@@ -167,12 +195,14 @@ func handleManifestsUpdate(db datastore.Datastore) httprouter.Handle {
 
 // use manifestPayload to check for nil values during an update
 type manifestPayload struct {
-	Filename          *string   `plist:"-" json:"name"`
-	Catalogs          *[]string `plist:"catalogs,omitempty" json:"catalogs,omitempty"`
-	DisplayName       *string   `plist:"display_name,omitempty" json:"display_name,omitempty"`
-	IncludedManifests *[]string `plist:"included_manifests,omitempty" json:"included_manifests,omitempty"`
-	OptionalInstalls  *[]string `plist:"optional_installs,omitempty" json:"optional_installs,omitempty"`
-	ManagedInstalls   *[]string `plist:"managed_installs,omitempty" json:"managed_installs,omitempty"`
-	Notes             *string   `plist:"notes,omitempty" json:"notes,omitempty"`
-	User              *string   `plist:"user,omitempty" json:"user,omitempty"`
+	Filename          *string   `json:"name"`
+	Catalogs          *[]string `json:"catalogs,omitempty"`
+	DisplayName       *string   `json:"display_name,omitempty"`
+	IncludedManifests *[]string `json:"included_manifests,omitempty"`
+	OptionalInstalls  *[]string `json:"optional_installs,omitempty"`
+	ManagedInstalls   *[]string `json:"managed_installs,omitempty"`
+	ManagedUninstalls *[]string `json:"managed_uninstalls,omitempty"`
+	ManagedUpdates    *[]string `json:"managed_updates,omitempty"`
+	Notes             *string   `json:"notes,omitempty"`
+	User              *string   `json:"user,omitempty"`
 }

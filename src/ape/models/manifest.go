@@ -15,6 +15,8 @@ type Manifest struct {
 	IncludedManifests []string `plist:"included_manifests,omitempty" json:"included_manifests,omitempty"`
 	OptionalInstalls  []string `plist:"optional_installs,omitempty" json:"optional_installs,omitempty"`
 	ManagedInstalls   []string `plist:"managed_installs,omitempty" json:"managed_installs,omitempty"`
+	ManagedUninstalls []string `plist:"managed_uninstalls,omitempty" json:"managed_uninstalls,omitempty"`
+	ManagedUpdates    []string `plist:"managed_updates,omitempty" json:"managed_updates,omitempty"`
 	Notes             string   `plist:"notes,omitempty" json:"notes,omitempty"`
 	User              string   `plist:"user,omitempty" json:"user,omitempty"`
 }
