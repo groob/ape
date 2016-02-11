@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -87,6 +88,12 @@ func handleManifestsDelete(db datastore.Datastore) httprouter.Handle {
 	return func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		name := ps.ByName("name")
 		err := db.DeleteManifest(name)
+		// path error
+		if _, ok := err.(*os.PathError); ok {
+			respondError(rw, http.StatusNotFound, err)
+			return
+		}
+
 		if err != nil {
 			respondError(rw, http.StatusInternalServerError,
 				fmt.Errorf("Failed to delete manifest from the datastore: %v", err))

@@ -1,19 +1,16 @@
 package models
 
-import "encoding/json"
+import "errors"
+
+// ErrNotFound when a resource is empy
+var ErrNotFound = errors.New("Not Found")
 
 // Viewer interface
 type Viewer interface {
-	View() *View
+	View() (*APIResponse, error)
 }
 
-// View model
-type View map[string]interface{}
-
-// ToJSON returns json array or error
-func (v *View) ToJSON() ([]byte, error) {
-	if len(*v) == 0 {
-		return nil, errNoContent
-	}
-	return json.MarshalIndent(v, "", " ")
+// APIResponse ...
+type APIResponse struct {
+	Data []byte
 }

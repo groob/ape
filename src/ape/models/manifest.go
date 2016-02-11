@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"io"
 
 	"github.com/groob/plist"
@@ -8,11 +9,14 @@ import (
 
 // Manifest represents the structure of a munki manifest plist
 type Manifest struct {
-	Filename          string   `plist:"-" json:"-"`
+	Filename          string   `plist:"-" json:"name"`
 	Catalogs          []string `plist:"catalogs,omitempty" json:"catalogs,omitempty"`
 	DisplayName       string   `plist:"display_name,omitempty" json:"display_name,omitempty"`
 	IncludedManifests []string `plist:"included_manifests,omitempty" json:"included_manifests,omitempty"`
+	OptionalInstalls  []string `plist:"optional_installs,omitempty" json:"optional_installs,omitempty"`
 	ManagedInstalls   []string `plist:"managed_installs,omitempty" json:"managed_installs,omitempty"`
+	Notes             string   `plist:"notes,omitempty" json:"notes,omitempty"`
+	User              string   `plist:"user,omitempty" json:"user,omitempty"`
 }
 
 // Decode a plist into a struct
@@ -28,34 +32,30 @@ func (m *Manifest) Encode(w io.Writer) error {
 }
 
 // View returns a map for the JSON response
-func (m *Manifest) View() *View {
+func (m *Manifest) View() (*APIResponse, error) {
 	if m == nil {
-		return &View{}
+		return nil, ErrNotFound
 	}
-	var view = make(View, 0)
-	view[m.Filename] = m
-	return &view
-}
-
-// ManifestListx returns a default view in api response
-func ManifestListx(manifests []*Manifest) *View {
-	var viewDefault = make(View, len(manifests))
-	for _, info := range manifests {
-		viewDefault[info.Filename] = info
-
+	response := &APIResponse{}
+	data, err := json.MarshalIndent(m, "", " ")
+	if err != nil {
+		return response, err
 	}
-	return &viewDefault
+
+	response.Data = data
+	return response, nil
 }
 
 // ManifestList represents a slice of manifests
 type ManifestList []*Manifest
 
 // View returns a view
-func (l ManifestList) View() *View {
-	var viewDefault = make(View, len(l))
-	for _, info := range l {
-		viewDefault[info.Filename] = info
-
+func (m *ManifestList) View() (*APIResponse, error) {
+	response := &APIResponse{}
+	data, err := json.MarshalIndent(m, "", " ")
+	if err != nil {
+		return response, err
 	}
-	return &viewDefault
+	response.Data = data
+	return response, nil
 }

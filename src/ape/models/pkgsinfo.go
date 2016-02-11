@@ -64,15 +64,15 @@ func (p *PkgsInfo) Encode(w io.Writer) error {
 	return plist.NewEncoder(w).Encode(p)
 }
 
-// View returns a map for the JSON response
-func (p *PkgsInfo) View() *View {
-	if p == nil {
-		return &View{}
-	}
-	var view = make(View, 0)
-	view[p.Filename] = p
-	return &view
-}
+// // View returns a map for the JSON response
+// func (p *PkgsInfo) View() *View {
+// 	if p == nil {
+// 		return &View{}
+// 	}
+// 	var view = make(View, 0)
+// 	view[p.Filename] = p
+// 	return &view
+// }
 
 type defaultPkgsInfoView struct {
 	Name        string   `json:"name"`
@@ -82,16 +82,16 @@ type defaultPkgsInfoView struct {
 }
 
 // PkgsInfoList returns a default view in api response
-func PkgsInfoList(pkgsinfos []*PkgsInfo) *View {
-	var viewDefault = make(View, len(pkgsinfos))
-	for _, info := range pkgsinfos {
-		viewDefault[info.Filename] = &defaultPkgsInfoView{
-			Name:        info.Name,
-			DisplayName: info.DisplayName,
-			Catalogs:    info.Catalogs,
-			PkgURL:      info.InstallerItemLocation,
-		}
-
-	}
-	return &viewDefault
-}
+// func PkgsInfoList(pkgsinfos []*PkgsInfo) *View {
+// 	var viewDefault = make(View, len(pkgsinfos))
+// 	for _, info := range pkgsinfos {
+// 		viewDefault[info.Filename] = &defaultPkgsInfoView{
+// 			Name:        info.Name,
+// 			DisplayName: info.DisplayName,
+// 			Catalogs:    info.Catalogs,
+// 			PkgURL:      info.InstallerItemLocation,
+// 		}
+//
+// 	}
+// 	return &viewDefault
+// }
