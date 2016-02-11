@@ -17,6 +17,17 @@ search: true
 # Introduction
 
 Welcome to Ape, an API for Munki. 
+The API server manages a munki repo over HTTP endpoints, updating the underlying datastore, which can be one of:  
+
+* a plain collection of plist files on disk  
+* plist files on disk, version controlled in a git repo  
+* a database  
+
+Ape can also be used to serve the repository to `managedsoftwareupdate` clients using the `/repo` endpoint and will always return up to date catalogs. 
+
+## Status
+
+Currently only the manifests endpoing is fully managed, but I plan on adding support for managing pkgsinfos and pkgs as well. 
 
 # Authentication
 
@@ -152,3 +163,36 @@ This endpoint deletes an existing manifest.
 ### HTTP Request
 
 `DELETE http://example.com/manifests/:name`
+
+## Update an existing manifest
+
+```shell
+curl -H "Content-Type: application/json" \
+     -X PATCH --data \
+`{
+ "display_name": "updated manifest"
+}` http://example.com/manifests/foo.example.com
+```
+
+> On success, the above command returns HTTP 202 Ok and
+> JSON structured like this:
+
+```json
+{
+ "name": "foo.example.com",
+ "catalogs": [
+  "production"
+ ],
+ "display_name": "updated manifest"
+}
+```
+
+This endpoint updates an existing manifest
+
+### HTTP Request
+
+`PATCH http://example.com/manifests/:name`
+
+# PkgsInfos
+
+ To be added.
