@@ -140,8 +140,8 @@ func handleManifestsUpdate(db datastore.Datastore) httprouter.Handle {
 		}
 
 		// filename must match
-		if *payload.Filename != name {
-			respondError(rw, http.StatusBadRequest, nil)
+		if payload.Filename != nil && *payload.Filename != name {
+			respondError(rw, http.StatusBadRequest, errors.New("The name must not be changed"))
 			return
 		}
 
@@ -195,7 +195,7 @@ func handleManifestsUpdate(db datastore.Datastore) httprouter.Handle {
 
 // use manifestPayload to check for nil values during an update
 type manifestPayload struct {
-	Filename          *string      `json:"name"`
+	Filename          *string      `json:"name,omitempty"`
 	Catalogs          *[]string    `json:"catalogs,omitempty"`
 	DisplayName       *string      `json:"display_name,omitempty"`
 	IncludedManifests *[]string    `json:"included_manifests,omitempty"`
