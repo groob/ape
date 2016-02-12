@@ -21,9 +21,9 @@ type Datastore interface {
 type pkgsinfoStore interface {
 	AllPkgsInfos() (*models.PkgsInfoList, error)
 	PkgInfo(name string) (*models.PkgsInfo, error)
-	// NewPkgInfo(name string) (*models.PkgsInfo, error)
-	// SavePkgInfo(pkginfo *models.PkgsInfo) error
-	// DeletePkgInfo(name string) error
+	NewPkgInfo(name string) (*models.PkgsInfo, error)
+	SavePkgInfo(pkginfo *models.PkgsInfo) error
+	DeletePkgInfo(name string) error
 }
 
 type manifestStore interface {
