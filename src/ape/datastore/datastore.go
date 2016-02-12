@@ -16,6 +16,7 @@ var ErrExists = errors.New("Resource already exists")
 type Datastore interface {
 	pkgsinfoStore
 	manifestStore
+	pkgStore
 }
 
 type pkgsinfoStore interface {
@@ -24,6 +25,10 @@ type pkgsinfoStore interface {
 	NewPkgInfo(name string) (*models.PkgsInfo, error)
 	SavePkgInfo(pkginfo *models.PkgsInfo) error
 	DeletePkgInfo(name string) error
+}
+
+type pkgStore interface {
+	NewPkg(string, io.Reader) error
 }
 
 type manifestStore interface {
