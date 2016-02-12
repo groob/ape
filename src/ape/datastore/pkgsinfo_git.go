@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-// AllPkgsInfos returns a list of pkgsinfos
+// AllPkgsInfos returns a list of pkgsinfo
 func (r *GitRepo) AllPkgsInfos() (*models.PkgsInfoList, error) {
 	p := &pkgsInfos{}
 	err := p.load(r.Path)
@@ -44,13 +44,13 @@ func (r *GitRepo) NewPkgInfo(name string) (*models.PkgsInfo, error) {
 	pkgsinfo := &models.PkgsInfo{
 		Filename: name,
 	}
-	pkgsinfosPath := fmt.Sprintf("%v/pkgsinfos/%v", r.Path, pkgsinfo.Filename)
+	pkgsinfoPath := fmt.Sprintf("%v/pkgsinfo/%v", r.Path, pkgsinfo.Filename)
 	// check if exists
-	if _, err := os.Stat(pkgsinfosPath); err == nil {
+	if _, err := os.Stat(pkgsinfoPath); err == nil {
 		return nil, ErrExists
 	}
 	// create new
-	f, err := os.Create(pkgsinfosPath)
+	f, err := os.Create(pkgsinfoPath)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -61,8 +61,8 @@ func (r *GitRepo) NewPkgInfo(name string) (*models.PkgsInfo, error) {
 
 // SavePkgInfo saves a manifest to the datastore
 func (r *GitRepo) SavePkgInfo(pkgsinfo *models.PkgsInfo) error {
-	pkgsinfosPath := fmt.Sprintf("%v/pkgsinfos/%v", r.Path, pkgsinfo.Filename)
-	file, err := os.OpenFile(pkgsinfosPath, os.O_WRONLY, 0755)
+	pkgsinfoPath := fmt.Sprintf("%v/pkgsinfo/%v", r.Path, pkgsinfo.Filename)
+	file, err := os.OpenFile(pkgsinfoPath, os.O_WRONLY, 0755)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (r *GitRepo) SavePkgInfo(pkgsinfo *models.PkgsInfo) error {
 
 // DeletePkgInfo ...
 func (r *GitRepo) DeletePkgInfo(name string) error {
-	pkgsinfoPath := fmt.Sprintf("%v/pksinfos/%v", r.Path, name)
+	pkgsinfoPath := fmt.Sprintf("%v/pkgsinfo/%v", r.Path, name)
 	err := os.Remove(pkgsinfoPath)
 	if err != nil {
 		return err

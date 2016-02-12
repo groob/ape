@@ -13,7 +13,7 @@ var errNoContent = errors.New("No Content")
 
 // PkgsInfo represents the structure of a pkgsinfo file
 type PkgsInfo struct {
-	Filename              string        `plist:"-" json:"name"`
+	Filename              string        `plist:"-" json:"filename"`
 	Metadata              metadata      `plist:"_metadata" json:"_metadata"`
 	Autoremove            bool          `plist:"autoremove" json:"autoremove"`
 	Catalogs              []string      `plist:"catalogs" json:"catalogs"`
