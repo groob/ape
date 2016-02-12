@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"time"
@@ -12,9 +13,9 @@ var errNoContent = errors.New("No Content")
 
 // PkgsInfo represents the structure of a pkgsinfo file
 type PkgsInfo struct {
-	Filename              string        `plist:"-",json:"-"`
+	Filename              string        `plist:"-" json:"name"`
 	Metadata              metadata      `plist:"_metadata" json:"_metadata"`
-	Autoremove            bool          `plist:"autoremove" json:"autoremobe"`
+	Autoremove            bool          `plist:"autoremove" json:"autoremove"`
 	Catalogs              []string      `plist:"catalogs" json:"catalogs"`
 	Description           string        `plist:"description" json:"description"`
 	DisplayName           string        `plist:"display_name" json:"display_name"`
@@ -61,18 +62,24 @@ func (p *PkgsInfo) Decode(r io.Reader) error {
 
 // Encode a go struct into a plist
 func (p *PkgsInfo) Encode(w io.Writer) error {
-	return plist.NewEncoder(w).Encode(p)
+	enc := plist.NewEncoder(w)
+	enc.Indent("  ")
+	return enc.Encode(p)
 }
 
-// // View returns a map for the JSON response
-// func (p *PkgsInfo) View() *View {
-// 	if p == nil {
-// 		return &View{}
-// 	}
-// 	var view = make(View, 0)
-// 	view[p.Filename] = p
-// 	return &view
-// }
+// View returns an pkgsinfo api response
+func (p *PkgsInfo) View() (*APIResponse, error) {
+	if p == nil {
+		return nil, ErrNotFound
+	}
+	response := &APIResponse{}
+	data, err := json.MarshalIndent(p, "", " ")
+	if err != nil {
+		return response, err
+	}
+	response.Data = data
+	return response, nil
+}
 
 type defaultPkgsInfoView struct {
 	Name        string   `json:"name"`
@@ -81,17 +88,25 @@ type defaultPkgsInfoView struct {
 	PkgURL      string   `json:"pkg_url,omitempty"`
 }
 
-// PkgsInfoList returns a default view in api response
-// func PkgsInfoList(pkgsinfos []*PkgsInfo) *View {
-// 	var viewDefault = make(View, len(pkgsinfos))
-// 	for _, info := range pkgsinfos {
-// 		viewDefault[info.Filename] = &defaultPkgsInfoView{
-// 			Name:        info.Name,
-// 			DisplayName: info.DisplayName,
-// 			Catalogs:    info.Catalogs,
-// 			PkgURL:      info.InstallerItemLocation,
-// 		}
-//
-// 	}
-// 	return &viewDefault
-// }
+// PkgsInfoList is a list of pkgsinfos
+type PkgsInfoList []*PkgsInfo
+
+// View returns an view
+func (p *PkgsInfoList) View() (*APIResponse, error) {
+	var listView []defaultPkgsInfoView
+	for _, info := range *p {
+		listView = append(listView, defaultPkgsInfoView{
+			Name:        info.Filename,
+			DisplayName: info.DisplayName,
+			Catalogs:    info.Catalogs,
+			PkgURL:      info.InstallerItemLocation,
+		})
+	}
+	response := &APIResponse{}
+	data, err := json.MarshalIndent(listView, "", " ")
+	if err != nil {
+		return response, err
+	}
+	response.Data = data
+	return response, nil
+}

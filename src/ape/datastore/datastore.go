@@ -19,8 +19,11 @@ type Datastore interface {
 }
 
 type pkgsinfoStore interface {
-	AllPkgsInfos() ([]*models.PkgsInfo, error)
+	AllPkgsInfos() (*models.PkgsInfoList, error)
 	PkgInfo(name string) (*models.PkgsInfo, error)
+	// NewPkgInfo(name string) (*models.PkgsInfo, error)
+	// SavePkgInfo(pkginfo *models.PkgsInfo) error
+	// DeletePkgInfo(name string) error
 }
 
 type manifestStore interface {
@@ -44,7 +47,7 @@ func (r *GitRepo) updateIndex(l loader) {
 		pkgsinfos := l.(*pkgsInfos)
 		r.indexPkgsInfo = make(map[string]*models.PkgsInfo, len(*pkgsinfos))
 		for _, info := range *pkgsinfos {
-			v := models.PkgsInfo(info)
+			v := models.PkgsInfo(*info)
 			r.indexPkgsInfo[info.Filename] = &v
 		}
 	case l.(*manifests):
