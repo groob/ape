@@ -2,55 +2,86 @@ package api
 
 import (
 	"ape/models"
-	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
-func respondOK(rw http.ResponseWriter, body models.Viewer) {
-	rw.Header().Add("Content-Type", "application/json")
-	respond(rw, body, http.StatusOK)
-}
-
-func respondError(rw http.ResponseWriter, status int, err error) {
-	// TODO accept variadic error param
-	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(status)
-
-	resp := &ErrorResponse{Errors: make([]string, 0, 1)}
-	if err != nil {
-		resp.Errors = append(resp.Errors, err.Error())
-	}
-
-	if err := json.NewEncoder(rw).Encode(resp); err != nil {
-		resp.Errors = append(resp.Errors, err.Error())
-	}
-}
-
-func respondCreated(rw http.ResponseWriter, body models.Viewer, location string) {
-	if location != "" {
-		// TODO: Set location header
-	}
-	respond(rw, body, http.StatusCreated)
-}
-
-func respond(rw http.ResponseWriter, body models.Viewer, status int) {
-	view, err := body.View()
+func respond(rw http.ResponseWriter, body models.Viewer, accept string, status int) {
+	view, err := body.View(accept)
 	switch err {
 	case nil:
-		break
-	case models.ErrNotFound:
-		respondError(rw, http.StatusNotFound, err)
+		rw.WriteHeader(status)
+		rw.Write(view.Data)
+		return
+	case models.ErrNoData:
+		respondError(rw, http.StatusNotFound, accept, errors.New("Not Found"))
+		return
+	case models.ErrUnsupportedMedia:
+		log.Fatal(err)
 		return
 	default:
-		respondError(rw, http.StatusInternalServerError, err)
+		log.Fatal(err)
 		return
 	}
+}
 
+func respondError(rw http.ResponseWriter, status int, accept string, errs ...error) {
+	resp := &models.ErrorResponse{}
+	for _, err := range errs {
+		resp.Errors = append(resp.Errors, err.Error())
+	}
+	view, err := resp.View(accept)
+	if err != nil {
+		rw.WriteHeader(status)
+		log.Println(err)
+		return
+	}
 	rw.WriteHeader(status)
 	rw.Write(view.Data)
 }
 
-// ErrorResponse encodes errors into http response body
-type ErrorResponse struct {
-	Errors []string `json:"errors"`
+func respondOK(rw http.ResponseWriter, body models.Viewer, accept string) {
+	respond(rw, body, accept, http.StatusOK)
+}
+
+func respondCreated(rw http.ResponseWriter, body models.Viewer, accept string) {
+	respond(rw, body, accept, http.StatusCreated)
+}
+
+// if header is not set to json or xml, return json header
+func acceptHeader(r *http.Request) string {
+	accept := r.Header.Get("Accept")
+	switch accept {
+	case "application/xml":
+		return accept
+	default:
+		return "application/json"
+	}
+}
+
+func contentHeader(r *http.Request) string {
+	contentType := r.Header.Get("Content-Type")
+	switch contentType {
+	case "application/xml":
+		return contentType
+	default:
+		return "application/json"
+	}
+}
+
+func applyPkgsinfoFilters(pkgsinfos *models.PkgsInfoCollection, values url.Values) *models.PkgsInfoCollection {
+	if val, ok := values["catalogs"]; ok {
+		catalogs := strings.Split(val[0], ",")
+		pkgsinfos = pkgsinfos.ByCatalog(catalogs...)
+	}
+
+	if _, ok := values["name"]; ok {
+		name := values.Get("name")
+		pkgsinfos = pkgsinfos.ByName(name)
+	}
+
+	return pkgsinfos
 }

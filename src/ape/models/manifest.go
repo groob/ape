@@ -1,15 +1,9 @@
 package models
 
-import (
-	"encoding/json"
-	"io"
-
-	"github.com/groob/plist"
-)
-
-// Manifest represents the structure of a munki manifest plist
+// Manifest represents the structure of a munki manifest
+// This is what would be serialized in a datastore
 type Manifest struct {
-	Filename          string      `plist:"-" json:"name"`
+	Filename          string      `plist:"-" json:"-"`
 	Catalogs          []string    `plist:"catalogs,omitempty" json:"catalogs,omitempty"`
 	DisplayName       string      `plist:"display_name,omitempty" json:"display_name,omitempty"`
 	IncludedManifests []string    `plist:"included_manifests,omitempty" json:"included_manifests,omitempty"`
@@ -31,43 +25,34 @@ type condition struct {
 	*manifestItems
 }
 
-// Decode a plist into a struct
-func (m *Manifest) Decode(r io.Reader) error {
-	return plist.NewDecoder(r).Decode(m)
+// ManifestView is the response view
+type manifestView struct {
+	Filename string `plist:"filename,omitempty" json:"filename,omitempty"`
+	*Manifest
 }
 
-// Encode a go struct into a plist
-func (m *Manifest) Encode(w io.Writer) error {
-	enc := plist.NewEncoder(w)
-	enc.Indent("  ")
-	return enc.Encode(m)
-}
-
-// View returns a map for the JSON response
-func (m *Manifest) View() (*APIResponse, error) {
+// View returns response
+func (m *Manifest) View(accept string) (*Response, error) {
 	if m == nil {
-		return nil, ErrNotFound
-	}
-	response := &APIResponse{}
-	data, err := json.MarshalIndent(m, "", " ")
-	if err != nil {
-		return response, err
+		return nil, ErrNoData
 	}
 
-	response.Data = data
-	return response, nil
+	return marshal(m, accept)
 }
 
-// ManifestList represents a slice of manifests
-type ManifestList []*Manifest
+// ManifestCollection represents a list of manifests
+type ManifestCollection []*Manifest
 
-// View returns a view
-func (m *ManifestList) View() (*APIResponse, error) {
-	response := &APIResponse{}
-	data, err := json.MarshalIndent(m, "", " ")
-	if err != nil {
-		return response, err
+// View returns response
+func (m *ManifestCollection) View(accept string) (*Response, error) {
+	var view []*manifestView
+	for _, item := range *m {
+		viewItem := &manifestView{
+			item.Filename,
+			item,
+		}
+		view = append(view, viewItem)
 	}
-	response.Data = data
-	return response, nil
+
+	return marshal(view, accept)
 }

@@ -26,10 +26,10 @@ func NewServer(options ...func(*config) error) http.Handler {
 	return conf.mux
 }
 
-// GitRepo adds a Datastore backend
-func GitRepo(path string) func(*config) error {
+// SimpleRepo adds a file based backend
+func SimpleRepo(path string) func(*config) error {
 	return func(c *config) error {
-		c.db = &datastore.GitRepo{Path: path}
+		c.db = &datastore.SimpleRepo{Path: path}
 		return nil
 	}
 }

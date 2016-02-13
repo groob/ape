@@ -3,8 +3,8 @@ package datastore
 import (
 	"ape/models"
 	"errors"
+	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -12,116 +12,72 @@ import (
 // ErrExists file already exists
 var ErrExists = errors.New("Resource already exists")
 
+// ErrNotFound = resource not found
+var ErrNotFound = errors.New("Resource not found")
+
 // Datastore is an interface around munki storage
 type Datastore interface {
-	pkgsinfoStore
 	manifestStore
-	pkgStore
-}
-
-type pkgsinfoStore interface {
-	AllPkgsInfos() (*models.PkgsInfoList, error)
-	PkgInfo(name string) (*models.PkgsInfo, error)
-	NewPkgInfo(name string) (*models.PkgsInfo, error)
-	SavePkgInfo(pkginfo *models.PkgsInfo) error
-	DeletePkgInfo(name string) error
-}
-
-type pkgStore interface {
-	NewPkg(string, io.Reader) error
+	pkgsinfoStore
+	pkgsStore
 }
 
 type manifestStore interface {
-	AllManifests() (*models.ManifestList, error)
+	AllManifests() (*models.ManifestCollection, error)
 	Manifest(name string) (*models.Manifest, error)
 	NewManifest(name string) (*models.Manifest, error)
 	SaveManifest(manifest *models.Manifest) error
 	DeleteManifest(name string) error
 }
 
-// GitRepo is a munki repo
-type GitRepo struct {
+type pkgsinfoStore interface {
+	AllPkgsinfos() (*models.PkgsInfoCollection, error)
+	Pkgsinfo(name string) (*models.PkgsInfo, error)
+	NewPkgsinfo(name string) (*models.PkgsInfo, error)
+	SavePkgsinfo(manifest *models.PkgsInfo) error
+	DeletePkgsinfo(name string) error
+}
+
+type pkgsStore interface {
+	NewPkg(filename string, body io.Reader) error
+	DeletePkg(name string) error
+}
+
+// SimpleRepo is a filesystem based backend
+type SimpleRepo struct {
 	Path           string
-	indexPkgsInfo  map[string]*models.PkgsInfo
 	indexManifests map[string]*models.Manifest
+	indexPkgsinfo  map[string]*models.PkgsInfo
 }
 
-func (r *GitRepo) updateIndex(l loader) {
-	switch l {
-	case l.(*pkgsInfos):
-		pkgsinfos := l.(*pkgsInfos)
-		r.indexPkgsInfo = make(map[string]*models.PkgsInfo, len(*pkgsinfos))
-		for _, info := range *pkgsinfos {
-			v := models.PkgsInfo(*info)
-			r.indexPkgsInfo[info.Filename] = &v
-		}
-	case l.(*manifests):
-		manifests := l.(*manifests)
-		r.indexManifests = make(map[string]*models.Manifest, len(*manifests))
-		for _, info := range *manifests {
-			v := models.Manifest(*info)
-			r.indexManifests[info.Filename] = &v
-		}
-	}
-}
-
-type loader interface {
-	load(string) error
-	add(decoder)
-}
-
-type decoder interface {
-	Decode(io.Reader) error
-}
-
-func repoWalkFn(pkgs loader) filepath.WalkFunc {
-	return func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		if !info.IsDir() {
-			if err := open(pkgs, info, file); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-}
-
-// pkginfo adds a new PkgsInfo to the array, but skips if it fails to the code the plist
-var open = func(l loader, info os.FileInfo, file *os.File) error {
-	var into decoder
-	if _, ok := l.(*pkgsInfos); ok {
-		into = &models.PkgsInfo{}
-	}
-	if _, ok := l.(*manifests); ok {
-		into = &models.Manifest{}
+// NewPkg creates a new pkg file
+func (r *SimpleRepo) NewPkg(filename string, body io.Reader) error {
+	pkgPath := fmt.Sprintf("%v/pkgs/%v", r.Path, filename)
+	// check if exists
+	if _, err := os.Stat(pkgPath); err == nil {
+		return ErrExists
 	}
 
-	err := into.Decode(file)
+	dir := filepath.Dir(pkgPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	// create new
+	f, err := os.Create(pkgPath)
 	if err != nil {
-		log.Printf("git-repo: failed to decode %v, skipping \n", info.Name())
-		return nil
+		return err
 	}
-	switch into {
-	case into.(*models.PkgsInfo):
-		v := into.(*models.PkgsInfo)
-		v.Filename = info.Name()
-		l.add(v)
-		return nil
-	case into.(*models.Manifest):
-		v := into.(*models.Manifest)
-		v.Filename = info.Name()
-		l.add(v)
-		return nil
-	default:
-		return errors.New("git datastore: wrong decoder type")
+	defer f.Close()
+
+	_, err = io.Copy(f, body)
+	if err != nil {
+		return err
 	}
+	return nil
+}
+
+// DeletePkg deletes a pkg file
+func (r *SimpleRepo) DeletePkg(name string) error {
+	pkgPath := fmt.Sprintf("%v/pkgs/%v", r.Path, name)
+	return os.Remove(pkgPath)
 }

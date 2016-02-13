@@ -1,41 +1,32 @@
 package api
 
 import (
-	"ape/datastore"
-	"fmt"
 	"net/http"
 
-	"github.com/groob/plist"
 	"github.com/julienschmidt/httprouter"
 )
 
 func router(conf *config) http.Handler {
 	router := httprouter.New()
+	// handle manifest actions
 	router.GET("/api/manifests", handleManifestsList(conf.db))
-	router.GET("/api/manifests/:name", handleManifestsShow(conf.db))
 	router.POST("/api/manifests", handleManifestsCreate(conf.db))
-	router.DELETE("/api/manifests/:name", handleManifestsDelete(conf.db))
-	router.PATCH("/api/manifests/:name", handleManifestsUpdate(conf.db))
-	router.GET("/api/pkgsinfos", handlePackagesList(conf.db))
-	router.GET("/api/pkgsinfos/:name", handlePackagesShow(conf.db))
-	router.POST("/api/pkgsinfos", handlePackagesCreate(conf.db))
-	router.DELETE("/api/pkgsinfos/:name", handlePackagesDelete(conf.db))
-	router.POST("/api/pkgs/*path", handlePkgsCreate(conf.db))
-	router.ServeFiles("/repo/*filepath", http.Dir("repo"))
-	router.GET("/catalogs/:name", handleCatalogsShow(conf.db))
+	router.GET("/api/manifests/*name", handleManifestsShow(conf.db))
+	router.PUT("/api/manifests/*name", handleManifestsReplace(conf.db))
+	router.PATCH("/api/manifests/*name", handleManifestsUpdate(conf.db))
+	router.DELETE("/api/manifests/*name", handleManifestsDelete(conf.db))
+	// handle pkgsinfo actions
+	router.GET("/api/pkgsinfo", handlePkgsinfoList(conf.db))
+	router.POST("/api/pkgsinfo", handlePkgsinfoCreate(conf.db))
+	router.GET("/api/pkgsinfo/*name", handlePkgsinfoShow(conf.db))
+	router.PUT("/api/pkgsinfo/*name", handlePkgsinfoReplace(conf.db))
+	// TODO: Create PATCH method for pkgsinfo
+	// router.PATCH("/api/pkgsinfo/*name", handlePkgsInfoUpdate(conf.db))
+	router.DELETE("/api/pkgsinfo/*name", handlePkgsinfoDelete(conf.db))
+	// handle pkgs actions
+	router.POST("/api/pkgs/*name", handlePkgsCreate(conf.db))
+	router.DELETE("/api/pkgs/*name", handlePkgsDelete(conf.db))
+	// handle file server
+	// handle catalogs
 	return router
-}
-
-func handleCatalogsShow(db datastore.Datastore) httprouter.Handle {
-	return func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		// name := ps.ByName("name")
-		pkgsinfos, err := db.AllPkgsInfos()
-		if err != nil {
-			respondError(rw, http.StatusInternalServerError,
-				fmt.Errorf("Failed to fetch pkgsinfo from the datastore: %v", err))
-			return
-		}
-
-		plist.NewEncoder(rw).Encode(pkgsinfos)
-	}
 }
