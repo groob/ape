@@ -17,7 +17,9 @@ type PkgsInfo struct {
 	Metadata              metadata      `plist:"_metadata" json:"_metadata"`
 	Autoremove            bool          `plist:"autoremove" json:"autoremove"`
 	Catalogs              []string      `plist:"catalogs" json:"catalogs"`
+	Category              string        `plist:"category,omitempty"`
 	Description           string        `plist:"description" json:"description"`
+	Developer             string        `plist:"developer,omitempty"`
 	DisplayName           string        `plist:"display_name" json:"display_name"`
 	InstallerItemHash     string        `plist:"installer_item_hash" json:"installer_item_hash"`
 	InstallerItemLocation string        `plist:"installer_item_location" json:"installer_item_location"`
