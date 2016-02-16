@@ -10,7 +10,7 @@ type Manifest struct {
 	Notes             string      `plist:"notes,omitempty" json:"notes,omitempty"`
 	User              string      `plist:"user,omitempty" json:"user,omitempty"`
 	ConditionalItems  []condition `plist:"conditional_items,omitempty" json:"conditional_items,omitempty"`
-	*manifestItems
+	manifestItems
 }
 
 type manifestItems struct {
@@ -22,7 +22,7 @@ type manifestItems struct {
 
 type condition struct {
 	Condition string `plist:"condition" json:"condition"`
-	*manifestItems
+	manifestItems
 }
 
 // ManifestView is the response view
