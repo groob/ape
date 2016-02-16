@@ -23,12 +23,29 @@ The API server manages a munki repo over HTTP endpoints, updating the underlying
 * plist files on disk, version controlled in a git repo  
 * a database  
 
-Ape can also be used to serve the repository to `managedsoftwareupdate` clients using the `/repo` endpoint and will always return up to date catalogs. 
-
 ## Status
 
-Currently only the manifests endpoing is fully managed, but I plan on adding support for managing pkgsinfos and pkgs as well. 
+### Endpoints
+/manifests - documented below
+/pkgsinfo - should work the same as manifests
+/pkgs/*path/to/pkg - POST or DELETE binary files
 
+### Content and Accept Headers
+
+All requests support `application/xml`(plist) and `application/json` as `Accept` and `Content-Type` headers. 
+
+
+> To send a plist
+
+```shell
+curl -H "Content-Type: apllication/xml" -d@myplist.plist http://api/endpoint
+```
+
+> To receive response as a plist:  
+
+```shell
+curl -H "Accept: application/xml" -d@myplist.plist http://api/endpoint
+```
 # Authentication
 
 None Yet. You can implement authentication by using nginx or apache as a proxy.
@@ -47,7 +64,7 @@ curl "http://example.com/api/manifests"
 ```json
 [
  {
-  "name": "C02KP0H4DR55",
+  "filename": "C02KP0H4DR55",
   "catalogs": [
    "production"
   ],
@@ -62,7 +79,7 @@ curl "http://example.com/api/manifests"
   "user": "John Doe"
  },
  {
-  "name": "vagrant-15C50",
+  "filename": "vagrant-15C50",
   "catalogs": [
    "testing"
   ],
@@ -97,7 +114,6 @@ curl "http://example.com/api/manifests/site_default"
 
 ```json
 {
- "name": "site_default",
  "catalogs": [
   "production"
  ],
@@ -121,7 +137,7 @@ This endpoint retrieves a specific manifest.
 curl -H "Content-Type: application/json" \
      -X POST --data \
 `{
- "name": "foo.example.com",
+ "filename": "foo.example.com",
  "catalogs": [
   "production"
  ],
@@ -134,7 +150,6 @@ curl -H "Content-Type: application/json" \
 
 ```json
 {
- "name": "foo.example.com",
  "catalogs": [
   "production"
  ],
@@ -179,7 +194,6 @@ curl -H "Content-Type: application/json" \
 
 ```json
 {
- "name": "foo.example.com",
  "catalogs": [
   "production"
  ],
@@ -195,4 +209,15 @@ This endpoint updates an existing manifest
 
 # PkgsInfos
 
- To be added.
+works like manifests, needs to be documented
+
+# Pkgs
+Binary files can be added and deleted:
+
+```shell
+curl -vX POST http://example.com/api/pkgs/apps/Firefox-43-0-4.dmg --data-binary @Firefox-43.0.4.dmg
+```
+
+```shell
+curl -vX DELETE http://example.com/api/pkgs/apps/Firefox-43-0-4.dmg
+```
