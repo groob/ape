@@ -1,7 +1,7 @@
 # Ape - Munki API and server
 
 ## API 
-documented at ape-docs.groob.io
+documented at [ape-docs.groob.io](http://ape-docs.groob.io)
 
 ## Server
 The Ape server is a single binary that includes the API and also supports a static file server to serve the munki repo 
