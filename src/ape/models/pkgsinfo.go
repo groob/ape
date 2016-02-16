@@ -4,8 +4,11 @@ import "time"
 
 // PkgsInfo represents the structure of a pkgsinfo file
 type PkgsInfo struct {
-	Filename                 string                `plist:"-" json:"-"`
-	Metadata                 metadata              `plist:"_metadata,omitempty" json:"_metadata,omitempty"`
+	pkgsinfo
+	Filename string   `plist:"-" json:"-"`
+	Metadata metadata `plist:"_metadata,omitempty" json:"_metadata,omitempty"`
+}
+type pkgsinfo struct {
 	Autoremove               bool                  `plist:"autoremove,omitempty" json:"autoremove,omitempty"`
 	Catalogs                 []string              `plist:"catalogs,omitempty" json:"catalogs,omitempty"`
 	Category                 string                `plist:"category,omitempty" json:"category,omitempty"`
@@ -108,6 +111,14 @@ func (p *PkgsInfo) View(accept string) (*Response, error) {
 	return marshal(p, accept)
 }
 
+// Catalog converts a pkgsinfo to a catalog
+func (p *PkgsInfo) catalog() *Catalog {
+	catalog := &Catalog{
+		p.pkgsinfo,
+	}
+	return catalog
+}
+
 type pkgsinfoView struct {
 	Filename string `plist:"filename,omitempty" json:"filename,omitempty"`
 	*PkgsInfo
@@ -115,6 +126,23 @@ type pkgsinfoView struct {
 
 // PkgsInfoCollection is a collection of pkgsinfos
 type PkgsInfoCollection []*PkgsInfo
+
+// Catalog return a specific catalog
+func (p *PkgsInfoCollection) Catalog(name string) *Catalogs {
+	catalogs := Catalogs{}
+	var pkgsinfos *PkgsInfoCollection
+	if name != "all" {
+		filtered := p.ByCatalog(name)
+		pkgsinfos = filtered
+	} else {
+		pkgsinfos = p
+	}
+	for _, info := range *pkgsinfos {
+		catalog := info.catalog()
+		catalogs = append(catalogs, catalog)
+	}
+	return &catalogs
+}
 
 // View returns an api response view
 func (p *PkgsInfoCollection) View(accept string) (*Response, error) {

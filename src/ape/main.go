@@ -30,6 +30,11 @@ func init() {
 		flag.Usage()
 		log.Fatal(usage)
 	}
+
+	if !dirExists(*flRepo) {
+		log.Fatal("MUNKI_REPO_PATH must exist")
+	}
+
 	if *flPort == "" {
 		log.Println("no port flag specified. Using port 80 by default")
 		*flPort = "80"

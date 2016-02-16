@@ -27,6 +27,8 @@ func router(conf *config) http.Handler {
 	router.POST("/api/pkgs/*name", handlePkgsCreate(conf.db))
 	router.DELETE("/api/pkgs/*name", handlePkgsDelete(conf.db))
 	// handle file server
-	// handle catalogs
+	// router.GET("/repo/*filepath", handlePkgsinfoList(conf.db))
+	router.ServeFiles("/repo/*filepath", http.Dir(conf.repoPath))
+
 	return router
 }

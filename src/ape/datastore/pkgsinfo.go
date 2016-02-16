@@ -30,7 +30,6 @@ func (r *SimpleRepo) Pkgsinfo(name string) (*models.PkgsInfo, error) {
 		return nil, err
 	}
 	r.updatePkgsinfoIndex(pkgsinfos)
-
 	pkgsinfo, ok := r.indexPkgsinfo[name]
 	if !ok {
 		return nil, ErrNotFound
@@ -74,13 +73,18 @@ func (r *SimpleRepo) SavePkgsinfo(pkgsinfo *models.PkgsInfo) error {
 	if err := plist.NewEncoder(file).Encode(pkgsinfo); err != nil {
 		return err
 	}
+	makecatalogs <- true
 	return nil
 }
 
 // DeletePkgsinfo deletes a pkgsinfo file
 func (r *SimpleRepo) DeletePkgsinfo(name string) error {
 	pkgsinfoPath := fmt.Sprintf("%v/pkgsinfo/%v", r.Path, name)
-	return os.Remove(pkgsinfoPath)
+	if err := os.Remove(pkgsinfoPath); err != nil {
+		return err
+	}
+	makecatalogs <- true
+	return nil
 }
 
 func (r *SimpleRepo) updatePkgsinfoIndex(pkgsinfos *models.PkgsInfoCollection) {

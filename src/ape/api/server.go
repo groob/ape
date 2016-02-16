@@ -7,8 +7,9 @@ import (
 )
 
 type config struct {
-	db  datastore.Datastore
-	mux http.Handler
+	db       datastore.Datastore
+	repoPath string
+	mux      http.Handler
 }
 
 // NewServer returns an http Handler
@@ -29,7 +30,10 @@ func NewServer(options ...func(*config) error) http.Handler {
 // SimpleRepo adds a file based backend
 func SimpleRepo(path string) func(*config) error {
 	return func(c *config) error {
-		c.db = &datastore.SimpleRepo{Path: path}
+		repo := &datastore.SimpleRepo{Path: path}
+		go repo.WatchCatalogs()
+		c.db = repo
+		c.repoPath = repo.Path
 		return nil
 	}
 }
