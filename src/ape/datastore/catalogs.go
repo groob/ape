@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/groob/plist"
 )
@@ -12,6 +13,7 @@ import (
 var makecatalogs = make(chan bool, 1)
 
 func (r *SimpleRepo) makeCatalogs(done chan bool) {
+	t1 := time.Now()
 	catalogs := map[string]*models.Catalogs{}
 	pkgsinfos, err := r.AllPkgsinfos()
 	if err != nil {
@@ -31,6 +33,8 @@ func (r *SimpleRepo) makeCatalogs(done chan bool) {
 			log.Println(err)
 		}
 	}
+	t2 := time.Now()
+	log.Printf("[%s] Number of Pkgsinfos: %v time: %v\n", "makecatalogs", len(*pkgsinfos), t2.Sub(t1))
 	done <- true
 }
 
