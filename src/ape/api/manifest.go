@@ -68,7 +68,8 @@ func handleManifestsCreate(db datastore.Datastore) httprouter.Handle {
 		case nil:
 			break
 		case io.EOF:
-			rw.WriteHeader(http.StatusBadRequest)
+			respondError(rw, http.StatusBadRequest, accept,
+				fmt.Errorf("Failed to create new manifest: %v", err))
 			return
 		default:
 			respondError(rw, http.StatusInternalServerError, accept,
@@ -164,7 +165,8 @@ func handleManifestsUpdate(db datastore.Datastore) httprouter.Handle {
 		case "application/json":
 			err = json.NewDecoder(r.Body).Decode(payload)
 		default:
-			rw.WriteHeader(http.StatusBadRequest)
+			respondError(rw, http.StatusBadRequest, accept,
+				fmt.Errorf("Failed to update manifest: %v", payload))
 			return
 		}
 
@@ -173,7 +175,8 @@ func handleManifestsUpdate(db datastore.Datastore) httprouter.Handle {
 		case nil:
 			break
 		case io.EOF:
-			rw.WriteHeader(http.StatusBadRequest)
+			respondError(rw, http.StatusBadRequest, accept,
+				fmt.Errorf("Failed to update manifest: %v", err))
 			return
 		default:
 			respondError(rw, http.StatusInternalServerError, accept,

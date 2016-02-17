@@ -10,6 +10,7 @@ import (
 )
 
 func respond(rw http.ResponseWriter, body models.Viewer, accept string, status int) {
+	setContentType(rw, accept)
 	view, err := body.View(accept)
 	switch err {
 	case nil:
@@ -55,8 +56,8 @@ func respondCreated(rw http.ResponseWriter, body models.Viewer, accept string) {
 func acceptHeader(r *http.Request) string {
 	accept := r.Header.Get("Accept")
 	switch accept {
-	case "application/xml":
-		return accept
+	case "application/xml", "application/xml; charset=utf-8":
+		return "application/xml"
 	default:
 		return "application/json"
 	}
@@ -65,8 +66,8 @@ func acceptHeader(r *http.Request) string {
 func contentHeader(r *http.Request) string {
 	contentType := r.Header.Get("Content-Type")
 	switch contentType {
-	case "application/xml":
-		return contentType
+	case "application/xml", "application/xml; charset=utf-8":
+		return "application/xml"
 	default:
 		return "application/json"
 	}
@@ -84,4 +85,15 @@ func applyPkgsinfoFilters(pkgsinfos *models.PkgsInfoCollection, values url.Value
 	}
 
 	return pkgsinfos
+}
+
+func setContentType(rw http.ResponseWriter, accept string) {
+	switch accept {
+	case "application/xml":
+		rw.Header().Set("Content-Type", "application/xml; charset=utf-8")
+		return
+	default:
+		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+		return
+	}
 }
