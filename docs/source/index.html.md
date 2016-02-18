@@ -299,7 +299,7 @@ curl -X POST \
      http://example.com/api/icons
 ```
 
-## Delete a pkg
+## Delete an icon
 
 ```shell
 curl -X DELETE http://example.com/api/icons/Firefox.png
@@ -326,7 +326,4 @@ Example 404 response:
  ]
 }
 ```
-
-
-
 
