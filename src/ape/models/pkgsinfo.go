@@ -2,6 +2,15 @@ package models
 
 import "time"
 
+// PkgsinfoStore is an interface for interacting with Pkgsinfo types
+type PkgsinfoStore interface {
+	AllPkgsinfos() (*PkgsInfoCollection, error)
+	Pkgsinfo(name string) (*PkgsInfo, error)
+	NewPkgsinfo(name string) (*PkgsInfo, error)
+	SavePkgsinfo(manifest *PkgsInfo) error
+	DeletePkgsinfo(name string) error
+}
+
 // PkgsInfo represents the structure of a pkgsinfo file
 type PkgsInfo struct {
 	pkgsinfo

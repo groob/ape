@@ -14,7 +14,7 @@ func handlePkgsCreate(db datastore.Datastore) httprouter.Handle {
 	return func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		path := strings.TrimLeft(ps.ByName("name"), "/")
 		accept := acceptHeader(r)
-		err := db.NewPkg(path, r.Body)
+		err := db.AddPkg(path, r.Body)
 		if _, ok := err.(*os.PathError); ok {
 			respondError(rw, http.StatusNotFound, accept, err)
 			return

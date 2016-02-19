@@ -89,7 +89,7 @@ func (m *MockRepo) Pkgsinfo(name string) (*models.PkgsInfo, error)    { return n
 func (m *MockRepo) NewPkgsinfo(name string) (*models.PkgsInfo, error) { return nil, nil }
 func (m *MockRepo) SavePkgsinfo(manifest *models.PkgsInfo) error      { return nil }
 func (m *MockRepo) DeletePkgsinfo(name string) error                  { return nil }
-func (m *MockRepo) NewPkg(filename string, body io.Reader) error      { return nil }
+func (m *MockRepo) AddPkg(filename string, body io.Reader) error      { return nil }
 func (m *MockRepo) DeletePkg(name string) error                       { return nil }
 
 func newTestServer() *httptest.Server {

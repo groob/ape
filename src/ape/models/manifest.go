@@ -1,5 +1,14 @@
 package models
 
+// ManifestStore is the interface for accessing manifests in a database or filesystem
+type ManifestStore interface {
+	AllManifests() (*ManifestCollection, error)
+	Manifest(name string) (*Manifest, error)
+	NewManifest(name string) (*Manifest, error)
+	SaveManifest(manifest *Manifest) error
+	DeleteManifest(name string) error
+}
+
 // Manifest represents the structure of a munki manifest
 // This is what would be serialized in a datastore
 type Manifest struct {
