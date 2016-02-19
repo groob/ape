@@ -11,21 +11,22 @@ import (
 )
 
 func handlePkgsCreate(db datastore.Datastore) httprouter.Handle {
-	return func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		path := strings.TrimLeft(ps.ByName("name"), "/")
+	return func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		accept := acceptHeader(r)
-		err := db.AddPkg(path, r.Body)
-		if _, ok := err.(*os.PathError); ok {
-			respondError(rw, http.StatusNotFound, accept, err)
-			return
-		}
+
+		// process the multipart form
+		filename, file, err := processFileUpload(r)
 		if err != nil {
-			respondError(rw, http.StatusInternalServerError, accept, err)
+			respondError(rw, http.StatusBadRequest, accept, err)
 			return
 		}
-		rw.WriteHeader(http.StatusOK)
-		rw.Write([]byte("done"))
-		return
+
+		// save to datastore
+		if err = db.AddPkg(filename, file); err != nil {
+			respondError(rw, errStatus(err), accept,
+				fmt.Errorf("Failed to save file: %v", err))
+			return
+		}
 	}
 }
 

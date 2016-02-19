@@ -136,5 +136,21 @@ func decodeRequest(r *http.Request, into interface{}) error {
 		err = fmt.Errorf("Incorrect Content-Type: %v", contentType)
 	}
 	return err
+}
 
+func processFileUpload(r *http.Request) (string, io.Reader, error) {
+	filename := r.FormValue("filename")
+	if filename == "" {
+		return "", nil, errors.New("Upload form must containt a filename key")
+	}
+	file, _, err := r.FormFile("filedata")
+	// check if file is missing
+	if err != nil && err == http.ErrMissingFile {
+		return "", nil, errors.New("Filedata must contain a file.")
+	}
+	// check remaining errors
+	if err != nil {
+		return "", nil, err
+	}
+	return filename, file, nil
 }
