@@ -76,7 +76,10 @@ func (r *SimpleRepo) SaveManifest(manifest *models.Manifest) error {
 // DeleteManifest ...
 func (r *SimpleRepo) DeleteManifest(name string) error {
 	manifestPath := fmt.Sprintf("%v/manifests/%v", r.Path, name)
-	return os.Remove(manifestPath)
+	if err := os.Remove(manifestPath); err != nil {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (r *SimpleRepo) updateManifestIndex(manifests *models.ManifestCollection) {

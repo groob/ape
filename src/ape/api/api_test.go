@@ -3,7 +3,6 @@ package api
 import (
 	"ape/datastore"
 	"ape/models"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -79,7 +78,7 @@ func (m *MockRepo) SaveManifest(manifest *models.Manifest) error {
 }
 func (m *MockRepo) DeleteManifest(name string) error {
 	if _, ok := m.indexManifests[name]; !ok {
-		return &os.PathError{Err: errors.New("Failed to delete file")}
+		return datastore.ErrNotFound
 	}
 	delete(m.indexManifests, name)
 	return nil

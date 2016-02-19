@@ -3,15 +3,11 @@ package api
 import (
 	"ape/datastore"
 	"ape/models"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"strings"
 
-	"github.com/groob/plist"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -20,7 +16,7 @@ func handleManifestsList(db datastore.Datastore) httprouter.Handle {
 		accept := acceptHeader(r)
 		manifests, err := db.AllManifests()
 		if err != nil {
-			respondError(rw, http.StatusInternalServerError, accept,
+			respondError(rw, errStatus(err), accept,
 				fmt.Errorf("Failed to fetch manifest list from the datastore: %v", err))
 			return
 		}
@@ -34,7 +30,7 @@ func handleManifestsShow(db datastore.Datastore) httprouter.Handle {
 		accept := acceptHeader(r)
 		manifest, err := db.Manifest(name)
 		if err != nil {
-			respondError(rw, http.StatusInternalServerError, accept,
+			respondError(rw, errStatus(err), accept,
 				fmt.Errorf("Failed to fetch manifest from the datastore: %v", err))
 			return
 		}
@@ -45,41 +41,21 @@ func handleManifestsShow(db datastore.Datastore) httprouter.Handle {
 func handleManifestsCreate(db datastore.Datastore) httprouter.Handle {
 	return func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		accept := acceptHeader(r)
-		contentType := contentHeader(r)
+		var manifest *models.Manifest
 		var payload struct {
 			Filename string `plist:"filename" json:"filename"`
 			*models.Manifest
 		}
-		var err error
 
-		// decode into xml or json
-		switch contentType {
-		case "application/xml":
-			err = plist.NewDecoder(r.Body).Decode(&payload)
-		case "application/json":
-			err = json.NewDecoder(r.Body).Decode(&payload)
-		default:
-			rw.WriteHeader(http.StatusBadRequest)
+		err := decodeRequest(r, &payload)
+		if err != nil {
+			respondError(rw, errStatus(err), accept,
+				fmt.Errorf("Failed to decode request payload: %v", err))
 			return
 		}
 
-		// check error
-		switch err {
-		case nil:
-			break
-		case io.EOF:
-			respondError(rw, http.StatusBadRequest, accept,
-				fmt.Errorf("Failed to create new manifest: %v", err))
-			return
-		default:
-			respondError(rw, http.StatusInternalServerError, accept,
-				fmt.Errorf("Failed to create new manifest: %v", err))
-			return
-		}
-		var manifest *models.Manifest
-
+		// filename is required in the payload
 		if payload.Filename == "" {
-			// filename is required
 			respondError(rw, http.StatusBadRequest, accept,
 				errors.New("the name field is required to create a manifest"))
 			return
@@ -89,24 +65,21 @@ func handleManifestsCreate(db datastore.Datastore) httprouter.Handle {
 		manifest = payload.Manifest
 		manifest.Filename = payload.Filename
 
+		// create manifest in datastore
 		_, err = db.NewManifest(payload.Filename)
-		switch err {
-		case nil:
-			break
-		case datastore.ErrExists:
-			respondError(rw, http.StatusConflict, accept, err)
-			return
-		default:
-			respondError(rw, http.StatusInternalServerError, accept,
+		if err != nil {
+			respondError(rw, errStatus(err), accept,
 				fmt.Errorf("Failed to create new manifest: %v", err))
 			return
 		}
 
+		// save the manifest
 		if err := db.SaveManifest(manifest); err != nil {
-			respondError(rw, http.StatusInternalServerError, accept,
+			respondError(rw, errStatus(err), accept,
 				fmt.Errorf("Failed to save manifest: %v", err))
 			return
 		}
+
 		respondCreated(rw, manifest, accept)
 	}
 }
@@ -116,15 +89,8 @@ func handleManifestsDelete(db datastore.Datastore) httprouter.Handle {
 		name := strings.TrimLeft(ps.ByName("name"), "/")
 		accept := acceptHeader(r)
 		err := db.DeleteManifest(name)
-		// path error, return not found
-		if _, ok := err.(*os.PathError); ok {
-			respondError(rw, http.StatusNotFound, accept, err)
-			return
-		}
-
-		// all other errors
 		if err != nil {
-			respondError(rw, http.StatusInternalServerError, accept,
+			respondError(rw, errStatus(err), accept,
 				fmt.Errorf("Failed to delete manifest from the datastore: %v", err))
 			return
 		}
@@ -136,51 +102,18 @@ func handleManifestsUpdate(db datastore.Datastore) httprouter.Handle {
 	return func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		name := strings.TrimLeft(ps.ByName("name"), "/")
 		accept := acceptHeader(r)
-		contentType := contentHeader(r)
 		manifest, err := db.Manifest(name)
-		// path error, return not found
-		if _, ok := err.(*os.PathError); ok {
-			respondError(rw, http.StatusNotFound, accept, err)
-			return
-		}
-
-		// handle not found err
-		if err != nil && err == datastore.ErrNotFound {
-			respondError(rw, http.StatusNotFound, accept, err)
-			return
-		}
-		// all other errors
 		if err != nil {
-			respondError(rw, http.StatusInternalServerError, accept,
+			respondError(rw, errStatus(err), accept,
 				fmt.Errorf("Failed to delete manifest from the datastore: %v", err))
 			return
 		}
 
 		payload := &models.ManifestPayload{}
-
-		// decode into xml or json
-		switch contentType {
-		case "application/xml":
-			err = plist.NewDecoder(r.Body).Decode(payload)
-		case "application/json":
-			err = json.NewDecoder(r.Body).Decode(payload)
-		default:
-			respondError(rw, http.StatusBadRequest, accept,
-				fmt.Errorf("Failed to update manifest: %v", payload))
-			return
-		}
-
-		// handle err
-		switch err {
-		case nil:
-			break
-		case io.EOF:
-			respondError(rw, http.StatusBadRequest, accept,
-				fmt.Errorf("Failed to update manifest: %v", err))
-			return
-		default:
-			respondError(rw, http.StatusInternalServerError, accept,
-				fmt.Errorf("Failed to update manifest: %v", err))
+		err = decodeRequest(r, payload)
+		if err != nil {
+			respondError(rw, errStatus(err), accept,
+				fmt.Errorf("Failed to decode request payload: %v", err))
 			return
 		}
 
@@ -221,7 +154,7 @@ func handleManifestsUpdate(db datastore.Datastore) httprouter.Handle {
 		}
 
 		if err := db.SaveManifest(manifest); err != nil {
-			respondError(rw, http.StatusInternalServerError, accept,
+			respondError(rw, errStatus(err), accept,
 				fmt.Errorf("Failed to save manifest: %v", err))
 			return
 		}
@@ -235,53 +168,23 @@ func handleManifestsReplace(db datastore.Datastore) httprouter.Handle {
 	return func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		name := strings.TrimLeft(ps.ByName("name"), "/")
 		accept := acceptHeader(r)
-		contentType := contentHeader(r)
 		manifest, err := db.Manifest(name)
-		// path error, return not found
-		if _, ok := err.(*os.PathError); ok {
-			respondError(rw, http.StatusNotFound, accept, err)
-			return
-		}
-
-		// handle not found err
-		if err != nil && err == datastore.ErrNotFound {
-			respondError(rw, http.StatusNotFound, accept, err)
-			return
-		}
-		// all other errors
 		if err != nil {
-			respondError(rw, http.StatusInternalServerError, accept,
-				fmt.Errorf("Failed to delete manifest from the datastore: %v", err))
+			respondError(rw, errStatus(err), accept,
+				fmt.Errorf("Failed to upddate manifest: %v", err))
 			return
 		}
 
 		payload := &models.Manifest{}
-		// decode into xml or json
-		switch contentType {
-		case "application/xml":
-			err = plist.NewDecoder(r.Body).Decode(payload)
-		case "application/json":
-			err = json.NewDecoder(r.Body).Decode(payload)
-		default:
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		// handle err
-		switch err {
-		case nil:
-			break
-		case io.EOF:
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		default:
-			respondError(rw, http.StatusInternalServerError, accept,
-				fmt.Errorf("Failed to update manifest: %v", err))
+		err = decodeRequest(r, payload)
+		if err != nil {
+			respondError(rw, errStatus(err), accept,
+				fmt.Errorf("Failed to decode request payload: %v", err))
 			return
 		}
 
 		if err := db.SaveManifest(manifest); err != nil {
-			respondError(rw, http.StatusInternalServerError, accept,
+			respondError(rw, errStatus(err), accept,
 				fmt.Errorf("Failed to save manifest: %v", err))
 			return
 		}

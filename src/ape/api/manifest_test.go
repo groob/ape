@@ -128,6 +128,7 @@ func TestUpdateDeleteManifest(t *testing.T) {
 	f("CSXFLNGL9UW0", "DELETE", xmlMedia, nil, http.StatusNotFound)
 	// GET a manifest
 	f("site_default", "GET", xmlMedia, nil, http.StatusOK)
+	f("does-not-exist", "GET", jsonMedia, nil, http.StatusNotFound)
 	// GET all manifests
 	f("", "GET", xmlMedia, nil, http.StatusOK)
 	// method not allowed error

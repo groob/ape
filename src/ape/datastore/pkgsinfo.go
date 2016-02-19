@@ -14,8 +14,7 @@ import (
 // AllPkgsinfos returns a pkgsinfo collection
 func (r *SimpleRepo) AllPkgsinfos() (*models.PkgsInfoCollection, error) {
 	pkgsinfos := &models.PkgsInfoCollection{}
-	err := loadPkgsinfos(r.Path, pkgsinfos)
-	if err != nil {
+	if err := loadPkgsinfos(r.Path, pkgsinfos); err != nil {
 		return nil, err
 	}
 	r.updatePkgsinfoIndex(pkgsinfos)
@@ -25,8 +24,7 @@ func (r *SimpleRepo) AllPkgsinfos() (*models.PkgsInfoCollection, error) {
 // Pkgsinfo returns a single pkgsinfo from repo
 func (r *SimpleRepo) Pkgsinfo(name string) (*models.PkgsInfo, error) {
 	pkgsinfos := &models.PkgsInfoCollection{}
-	err := loadPkgsinfos(r.Path, pkgsinfos)
-	if err != nil {
+	if err := loadPkgsinfos(r.Path, pkgsinfos); err != nil {
 		return nil, err
 	}
 	r.updatePkgsinfoIndex(pkgsinfos)

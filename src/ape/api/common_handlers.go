@@ -1,12 +1,18 @@
 package api
 
 import (
+	"ape/datastore"
 	"ape/models"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/groob/plist"
 )
 
 func respond(rw http.ResponseWriter, body models.Viewer, accept string, status int) {
@@ -87,6 +93,7 @@ func applyPkgsinfoFilters(pkgsinfos *models.PkgsInfoCollection, values url.Value
 	return pkgsinfos
 }
 
+// set the Content-Type header
 func setContentType(rw http.ResponseWriter, accept string) {
 	switch accept {
 	case "application/xml":
@@ -96,4 +103,38 @@ func setContentType(rw http.ResponseWriter, accept string) {
 		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		return
 	}
+}
+
+// convert error to status code
+// checks an error from the datastore layer and
+// returns an appropriate statuscode
+func errStatus(err error) int {
+	switch err {
+	case nil:
+		return http.StatusOK
+	case io.EOF:
+		return http.StatusBadRequest
+	case datastore.ErrExists:
+		return http.StatusConflict
+	case datastore.ErrNotFound:
+		return http.StatusNotFound
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
+// decode an http request into a correct model type
+func decodeRequest(r *http.Request, into interface{}) error {
+	contentType := contentHeader(r)
+	var err error
+	switch contentType {
+	case "application/xml", "application/xml; charset=utf-8":
+		err = plist.NewDecoder(r.Body).Decode(into)
+	case "application/json":
+		err = json.NewDecoder(r.Body).Decode(into)
+	default:
+		err = fmt.Errorf("Incorrect Content-Type: %v", contentType)
+	}
+	return err
+
 }
