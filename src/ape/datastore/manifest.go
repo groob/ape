@@ -42,18 +42,8 @@ func (r *SimpleRepo) Manifest(name string) (*models.Manifest, error) {
 func (r *SimpleRepo) NewManifest(name string) (*models.Manifest, error) {
 	manifest := &models.Manifest{}
 	manifestPath := fmt.Sprintf("%v/manifests/%v", r.Path, name)
-	// check if exists
-	if _, err := os.Stat(manifestPath); err == nil {
-		return nil, ErrExists
-	}
-	// create new
-	f, err := os.Create(manifestPath)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	defer f.Close()
-	return manifest, nil
+	err := createFile(manifestPath)
+	return manifest, err
 }
 
 // SaveManifest saves a manifest to the datastore
@@ -73,13 +63,10 @@ func (r *SimpleRepo) SaveManifest(manifest *models.Manifest) error {
 	return nil
 }
 
-// DeleteManifest ...
+// DeleteManifest removes a manifest file from the repository
 func (r *SimpleRepo) DeleteManifest(name string) error {
 	manifestPath := fmt.Sprintf("%v/manifests/%v", r.Path, name)
-	if err := os.Remove(manifestPath); err != nil {
-		return ErrNotFound
-	}
-	return nil
+	return deleteFile(manifestPath)
 }
 
 func (r *SimpleRepo) updateManifestIndex(manifests *models.ManifestCollection) {

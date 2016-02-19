@@ -39,22 +39,8 @@ func (r *SimpleRepo) Pkgsinfo(name string) (*models.PkgsInfo, error) {
 func (r *SimpleRepo) NewPkgsinfo(name string) (*models.PkgsInfo, error) {
 	pkgsinfo := &models.PkgsInfo{}
 	pkgsinfoPath := fmt.Sprintf("%v/pkgsinfo/%v", r.Path, name)
-	// check if exists
-	if _, err := os.Stat(pkgsinfoPath); err == nil {
-		return nil, ErrExists
-	}
-	// create the pkgsinfo dir if it doesn't exit
-	dir := filepath.Dir(pkgsinfoPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, err
-	}
-	// create new
-	f, err := os.Create(pkgsinfoPath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return pkgsinfo, nil
+	err := createFile(pkgsinfoPath)
+	return pkgsinfo, err
 }
 
 // SavePkgsinfo saves a pkgsinfo file to the datastore
@@ -71,17 +57,21 @@ func (r *SimpleRepo) SavePkgsinfo(pkgsinfo *models.PkgsInfo) error {
 	if err := plist.NewEncoder(file).Encode(pkgsinfo); err != nil {
 		return err
 	}
-	makecatalogs <- true
+	go func() {
+		makecatalogs <- true
+	}()
 	return nil
 }
 
-// DeletePkgsinfo deletes a pkgsinfo file
+// DeletePkgsinfo deletes a pkgsinfo file from the datastore and triggers makecatalogs if succesful
 func (r *SimpleRepo) DeletePkgsinfo(name string) error {
 	pkgsinfoPath := fmt.Sprintf("%v/pkgsinfo/%v", r.Path, name)
-	if err := os.Remove(pkgsinfoPath); err != nil {
+	if err := deleteFile(pkgsinfoPath); err != nil {
 		return err
 	}
-	makecatalogs <- true
+	go func() {
+		makecatalogs <- true
+	}()
 	return nil
 }
 
@@ -126,6 +116,7 @@ func walkPkgsinfo(pkgsinfos *models.PkgsInfoCollection, pkgsinfoPath string) fil
 	}
 }
 
+// load the pkgsinfos
 func loadPkgsinfos(path string, pkgsinfos *models.PkgsInfoCollection) error {
 	pkgsinfoPath := fmt.Sprintf("%v/pkgsinfo", path)
 	return filepath.Walk(pkgsinfoPath, walkPkgsinfo(pkgsinfos, pkgsinfoPath))

@@ -58,7 +58,7 @@ func handlePkgsinfoCreate(db datastore.Datastore) httprouter.Handle {
 		// filename is required in the payload
 		if payload.Filename == "" {
 			respondError(rw, http.StatusBadRequest, accept,
-				errors.New("the name field is required to create a pkgsinfo"))
+				errors.New("The filename field is required to create a pkgsinfo"))
 			return
 		}
 
