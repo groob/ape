@@ -109,6 +109,7 @@ func handleManifestsUpdate(db datastore.Datastore) httprouter.Handle {
 			return
 		}
 
+		// decode payload from request body.
 		payload := &models.ManifestPayload{}
 		err = decodeRequest(r, payload)
 		if err != nil {
@@ -117,41 +118,8 @@ func handleManifestsUpdate(db datastore.Datastore) httprouter.Handle {
 			return
 		}
 
-		if payload.Catalogs != nil {
-			manifest.Catalogs = *payload.Catalogs
-		}
-
-		if payload.DisplayName != nil {
-			manifest.DisplayName = *payload.DisplayName
-		}
-
-		if payload.IncludedManifests != nil {
-			manifest.IncludedManifests = *payload.IncludedManifests
-		}
-
-		if payload.OptionalInstalls != nil {
-			manifest.OptionalInstalls = *payload.OptionalInstalls
-		}
-
-		if payload.ManagedInstalls != nil {
-			manifest.ManagedInstalls = *payload.ManagedInstalls
-		}
-
-		if payload.ManagedUninstalls != nil {
-			manifest.ManagedUninstalls = *payload.ManagedUninstalls
-		}
-
-		if payload.ManagedUpdates != nil {
-			manifest.ManagedUpdates = *payload.ManagedUpdates
-		}
-
-		if payload.Notes != nil {
-			manifest.Notes = *payload.Notes
-		}
-
-		if payload.User != nil {
-			manifest.User = *payload.User
-		}
+		// update manifest from payload fields.
+		manifest.UpdateFromPayload(payload)
 
 		if err := db.SaveManifest(manifest); err != nil {
 			respondError(rw, errStatus(err), accept,

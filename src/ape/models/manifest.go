@@ -49,6 +49,49 @@ func (m *Manifest) View(accept string) (*Response, error) {
 	return marshal(m, accept)
 }
 
+// UpdateFromPayload updates a manifest from a ManifestPayload
+func (m *Manifest) UpdateFromPayload(payload *ManifestPayload) {
+	if payload.Catalogs != nil {
+		m.Catalogs = *payload.Catalogs
+	}
+
+	if payload.DisplayName != nil {
+		m.DisplayName = *payload.DisplayName
+	}
+
+	if payload.IncludedManifests != nil {
+		m.IncludedManifests = *payload.IncludedManifests
+	}
+
+	if payload.OptionalInstalls != nil {
+		m.OptionalInstalls = *payload.OptionalInstalls
+	}
+
+	if payload.ManagedInstalls != nil {
+		m.ManagedInstalls = *payload.ManagedInstalls
+	}
+
+	if payload.ManagedUninstalls != nil {
+		m.ManagedUninstalls = *payload.ManagedUninstalls
+	}
+
+	if payload.ManagedUpdates != nil {
+		m.ManagedUpdates = *payload.ManagedUpdates
+	}
+
+	if payload.Notes != nil {
+		m.Notes = *payload.Notes
+	}
+
+	if payload.User != nil {
+		m.User = *payload.User
+	}
+
+	if payload.ConditionalItems != nil {
+		m.ConditionalItems = *payload.ConditionalItems
+	}
+}
+
 // ManifestCollection represents a list of manifests
 type ManifestCollection []*Manifest
 
