@@ -1,9 +1,12 @@
 package api
 
 import (
+	"ape/models"
+	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"net/http"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 )
@@ -32,11 +35,44 @@ func authMiddleware(next http.Handler) http.Handler {
 
 func handleBasicAuth() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		// accept := acceptHeader(r)
+		accept := acceptHeader(r)
 		username, password, ok := r.BasicAuth()
 		if !ok {
-			log.Println("not ok")
+			rw.Header().Set("WWW-Authenticate", `Basic realm="api"`)
+			respondError(rw, http.StatusUnauthorized, accept,
+				errors.New("Authentication Error: Unable to get username and password from header"))
+			return
 		}
+		// check credentials here
 		fmt.Println(username, password)
+		// credentials ok, issue a token
+		token, err := newToken()
+		if err != nil {
+			respondError(rw, http.StatusInternalServerError, accept, err)
+			return
+		}
+		respondOK(rw, &jwtToken{token}, accept)
 	}
+}
+
+type jwtToken struct {
+	Token string `json:"token"`
+}
+
+func newToken() (string, error) {
+	token := jwt.New(jwt.SigningMethodHS256)
+	token.Claims["iat"] = time.Now().Unix()
+	token.Claims["exp"] = time.Now().Add(time.Minute * 5).Unix()
+	return token.SignedString(secret)
+}
+
+func (t *jwtToken) View(accept string) (*models.Response, error) {
+	data, err := json.MarshalIndent(t, "", " ")
+	if err != nil {
+		return nil, err
+	}
+	resp := &models.Response{
+		Data: data,
+	}
+	return resp, nil
 }
