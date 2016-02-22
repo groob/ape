@@ -36,6 +36,7 @@ func respond(rw http.ResponseWriter, body models.Viewer, accept string, status i
 }
 
 func respondError(rw http.ResponseWriter, status int, accept string, errs ...error) {
+	setContentType(rw, accept)
 	resp := &models.ErrorResponse{}
 	for _, err := range errs {
 		resp.Errors = append(resp.Errors, err.Error())

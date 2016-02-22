@@ -4,6 +4,7 @@ import (
 	"ape/datastore"
 	"ape/models"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -37,6 +38,22 @@ func newMockRepo(path string) func(*config) error {
 		c.repoPath = repo.Path
 		return nil
 	}
+}
+
+func newMockServer(options ...func(*config) error) http.Handler {
+	conf := &config{}
+	for _, option := range options {
+		if err := option(conf); err != nil {
+			log.Fatal(err)
+		}
+	}
+	if conf.db == nil {
+		log.Fatal("No datastore configured")
+	}
+	// api routes
+	conf.mux = apiRouter(conf)
+
+	return conf.mux
 }
 
 func mockManifests() map[string]*models.Manifest {
@@ -92,7 +109,7 @@ func (m *MockRepo) AddPkg(filename string, body io.Reader) error      { return n
 func (m *MockRepo) DeletePkg(name string) error                       { return nil }
 
 func newTestServer() *httptest.Server {
-	apiHandler := NewServer(newMockRepo("mockrepo"))
+	apiHandler := newMockServer(newMockRepo("mockrepo"))
 	server := httptest.NewServer(apiHandler)
 	return server
 }

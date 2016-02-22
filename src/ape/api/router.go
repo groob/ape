@@ -7,6 +7,15 @@ import (
 )
 
 func router(conf *config) http.Handler {
+	mux := http.NewServeMux()
+	repo := http.StripPrefix("/repo/", http.FileServer(http.Dir(conf.repoPath)))
+	mux.Handle("/repo/", repo)
+	mux.Handle("/api/login", handleBasicAuth())
+	mux.Handle("/api/", authMiddleware(apiRouter(conf)))
+	return mux
+}
+
+func apiRouter(conf *config) *httprouter.Router {
 	router := httprouter.New()
 	// handle manifest actions
 	router.GET("/api/manifests", handleManifestsList(conf.db))
@@ -26,8 +35,5 @@ func router(conf *config) http.Handler {
 	// handle pkgs actions
 	router.POST("/api/pkgs", handlePkgsCreate(conf.db))
 	router.DELETE("/api/pkgs/*name", handlePkgsDelete(conf.db))
-	// handle file server
-	router.ServeFiles("/repo/*filepath", http.Dir(conf.repoPath))
-
 	return router
 }

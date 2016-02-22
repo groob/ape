@@ -32,7 +32,7 @@ func TestManifestsShow(t *testing.T) {
 
 		// check that the API returns 200 OK
 		if resp.StatusCode != 200 {
-			t.Error("Expected", 200, "got", resp.StatusCode)
+			t.Fatal("Expected", 200, "got", resp.StatusCode)
 		}
 
 		// check decoded response
@@ -104,8 +104,7 @@ func TestUpdateDeleteManifest(t *testing.T) {
 			t.Fatal(err)
 		}
 		if resp.StatusCode != status {
-			io.Copy(os.Stdout, resp.Body)
-			t.Error("Expected", status, "got", resp.StatusCode, "Method", method)
+			t.Fatal("Expected", status, "got", resp.StatusCode, "Method", method)
 		}
 	}
 
