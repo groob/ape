@@ -2,6 +2,12 @@
 	"version": 0,
 	"dependencies": [
 		{
+			"importpath": "github.com/dgrijalva/jwt-go",
+			"repository": "https://github.com/dgrijalva/jwt-go",
+			"revision": "f2193411bd642f7db03249fd79d5292c9b34916a",
+			"branch": "master"
+		},
+		{
 			"importpath": "github.com/groob/plist",
 			"repository": "https://github.com/groob/plist",
 			"revision": "1ef513422172dfc2c8fa751461dcef9df4bbdf99",
