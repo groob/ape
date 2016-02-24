@@ -18,6 +18,20 @@
 			"repository": "https://github.com/julienschmidt/httprouter",
 			"revision": "2c34ec888a7359c0750064e0a4c8df360806c255",
 			"branch": "master"
+		},
+		{
+			"importpath": "golang.org/x/crypto/bcrypt",
+			"repository": "https://go.googlesource.com/crypto",
+			"revision": "1f22c0103821b9390939b6776727195525381532",
+			"branch": "master",
+			"path": "/bcrypt"
+		},
+		{
+			"importpath": "golang.org/x/crypto/blowfish",
+			"repository": "https://go.googlesource.com/crypto",
+			"revision": "1f22c0103821b9390939b6776727195525381532",
+			"branch": "master",
+			"path": "/blowfish"
 		}
 	]
 }

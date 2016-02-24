@@ -11,6 +11,7 @@ func router(conf *config) http.Handler {
 	repo := http.StripPrefix("/repo/", http.FileServer(http.Dir(conf.repoPath)))
 	mux.Handle("/repo/", repo)
 	mux.Handle("/api/login", handleBasicAuth())
+	mux.Handle("/api/token", handleTokenRefresh())
 	mux.Handle("/api/", authMiddleware(apiRouter(conf)))
 	return mux
 }

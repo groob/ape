@@ -11,6 +11,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
+// TODO set from flag
 var secret = []byte("insecure-signing-key")
 
 // verify using jwt token
@@ -52,6 +53,33 @@ func handleBasicAuth() http.HandlerFunc {
 			return
 		}
 		respondOK(rw, &jwtToken{token}, accept)
+	}
+}
+
+// takes a valid token and returns a new one
+func handleTokenRefresh() http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		// validate request
+		accept := acceptHeader(r)
+		token, err := jwt.ParseFromRequest(r, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+			}
+			return secret, nil
+		})
+		// TODO some steps to validate token based on expiration or claims...
+		if err != nil || !token.Valid {
+			respondError(rw, http.StatusUnauthorized, accept,
+				fmt.Errorf("Authentication error: %v", err))
+			return
+		}
+		// issue new token
+		updatedToken, err := newToken()
+		if err != nil {
+			respondError(rw, http.StatusInternalServerError, accept, err)
+			return
+		}
+		respondOK(rw, &jwtToken{updatedToken}, accept)
 	}
 }
 
