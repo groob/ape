@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -10,10 +11,26 @@ func router(conf *config) http.Handler {
 	mux := http.NewServeMux()
 	repo := http.StripPrefix("/repo/", http.FileServer(http.Dir(conf.repoPath)))
 	mux.Handle("/repo/", repo)
-	mux.Handle("/api/login", handleBasicAuth())
-	mux.Handle("/api/token", handleTokenRefresh())
-	mux.Handle("/api/", authMiddleware(apiRouter(conf)))
+	addAuthOptions(mux, conf)
 	return mux
+}
+
+func addAuthOptions(mux *http.ServeMux, conf *config) {
+	// add login handler if basicAuth is enabled
+	if conf.basicAuth {
+		mux.Handle("/api/login", handleBasicAuth())
+		if !conf.jwtAuth || conf.jwtSecret == "" {
+			log.Fatal("basic auth needs jwt enabled")
+		}
+	}
+	// add token endpoints and authmiddleware if
+	// jwtAuth is enabled
+	if conf.jwtAuth {
+		mux.Handle("/api/token", handleTokenRefresh())
+		mux.Handle("/api/", authMiddleware(apiRouter(conf)))
+	} else {
+		mux.Handle("/api/", apiRouter(conf))
+	}
 }
 
 func apiRouter(conf *config) *httprouter.Router {

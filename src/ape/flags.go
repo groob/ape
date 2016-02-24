@@ -60,6 +60,11 @@ func initFlag() {
 	if *flJWT {
 		checkJWTFlags()
 	}
+
+	// validate basic auth
+	if *flBasic && !*flJWT {
+		log.Fatal("Basic Authentication is used to issue JWT Tokens. You must enable JWT as well")
+	}
 }
 
 func checkJWTFlags() {

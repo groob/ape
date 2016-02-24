@@ -16,9 +16,23 @@ func init() {
 }
 
 func main() {
+	var opts api.ServerOptions
+	// add jwt auth
+	if *flJWT {
+		jwtOpt := api.JWTAuth(*flJWTSecret)
+		opts = append(opts, jwtOpt)
+	}
+	// add basic auth
+	if *flBasic {
+		opts = append(opts, api.BasicAuth())
+	}
+	// configure repo
 	repo := api.SimpleRepo(*flRepo)
-	apiHandler := api.NewServer(repo)
+	opts = append(opts, repo)
+	// create handler
+	apiHandler := api.NewServer(opts...)
 	http.Handle("/", apiHandler)
+	// serve http or https
 	serve()
 }
 
