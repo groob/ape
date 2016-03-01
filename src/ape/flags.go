@@ -34,6 +34,7 @@ func envBool(key string) bool {
 }
 
 func initFlag() {
+	*flTLS = true
 	flag.Parse()
 	if *flRepo == "" {
 		flag.Usage()
