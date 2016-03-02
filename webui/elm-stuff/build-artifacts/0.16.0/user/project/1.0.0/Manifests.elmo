@@ -1,0 +1,175 @@
+Elm.Manifests = Elm.Manifests || {};
+Elm.Manifests.make = function (_elm) {
+   "use strict";
+   _elm.Manifests = _elm.Manifests || {};
+   if (_elm.Manifests.values) return _elm.Manifests.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Effects = Elm.Effects.make(_elm),
+   $Html = Elm.Html.make(_elm),
+   $Html$Attributes = Elm.Html.Attributes.make(_elm),
+   $Html$Events = Elm.Html.Events.make(_elm),
+   $Http = Elm.Http.make(_elm),
+   $Json$Decode = Elm.Json.Decode.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm),
+   $StartApp = Elm.StartApp.make(_elm),
+   $Task = Elm.Task.make(_elm);
+   var _op = {};
+   var firstCatalog = function (catalogs) {
+      var _p0 = catalogs;
+      if (_p0.ctor === "Just") {
+            return A2($Maybe.withDefault,"",$List.head(_p0._0));
+         } else {
+            return "";
+         }
+   };
+   var manifestRow = F2(function (address,manifest) {
+      return A2($Html.div,
+      _U.list([$Html$Attributes.$class("manifestrow")]),
+      _U.list([A2($Html.li,
+              _U.list([$Html$Attributes.$class("mitem")]),
+              _U.list([$Html.text(manifest.name)]))
+              ,A2($Html.li,
+              _U.list([$Html$Attributes.$class("mitem")]),
+              _U.list([$Html.text(A2($Maybe.withDefault,
+              "",
+              manifest.displayName))]))
+              ,A2($Html.li,
+              _U.list([$Html$Attributes.$class("mitem")]),
+              _U.list([$Html.text(firstCatalog(manifest.catalogs))]))]));
+   });
+   var reportError = function (error) {
+      var _p1 = error;
+      switch (_p1.ctor)
+      {case "Timeout": return A2($Debug.log,"API timeout",error);
+         case "NetworkError": return A2($Debug.log,
+           "Network error contacting API",
+           error);
+         case "UnexpectedPayload": return A2($Debug.log,
+           A2($Basics._op["++"],"Unexpected payload from API: ",_p1._0),
+           error);
+         default: return A2($Debug.log,
+           A2($Basics._op["++"],
+           "Unexpected status/payload from API: ",
+           A2($Basics._op["++"],
+           $Basics.toString(_p1._0),
+           A2($Basics._op["++"],"/",_p1._1))),
+           error);}
+   };
+   var update = F2(function (action,model) {
+      var _p2 = action;
+      switch (_p2.ctor)
+      {case "NoOp": return {ctor: "_Tuple2"
+                           ,_0: model
+                           ,_1: $Effects.none};
+         case "GetManifests": var _p3 = _p2._0;
+           if (_p3.ctor === "Ok") {
+                 return {ctor: "_Tuple2"
+                        ,_0: _U.update(model,{manifests: _p3._0})
+                        ,_1: $Effects.none};
+              } else {
+                 var _p4 = reportError(_p3._0);
+                 return {ctor: "_Tuple2",_0: model,_1: $Effects.none};
+              }
+         default: return {ctor: "_Tuple2"
+                         ,_0: _U.update(model,
+                         {manifests: $List.reverse(model.manifests)})
+                         ,_1: $Effects.none};}
+   });
+   var SortBy = function (a) {    return {ctor: "SortBy",_0: a};};
+   var manifestCollection = F2(function (address,manifests) {
+      var manifestItems = A2($List.map,
+      manifestRow(address),
+      manifests);
+      return A2($Html.div,
+      _U.list([$Html$Attributes.id("manifests")]),
+      _U.list([A2($Html.div,
+              _U.list([$Html$Attributes.$class("manifest_header_row")]),
+              _U.list([A2($Html.li,
+                      _U.list([$Html$Attributes.$class("manifest_header_item")]),
+                      _U.list([A2($Html.h1,
+                              _U.list([]),
+                              _U.list([$Html.text("Manifest")]))
+                              ,A2($Html.button,
+                              _U.list([$Html$Attributes.$class("sort")
+                                      ,A2($Html$Events.onClick,address,SortBy("name"))]),
+                              _U.list([$Html.text("sort")]))]))
+                      ,A2($Html.li,
+                      _U.list([$Html$Attributes.$class("manifest_header_item")]),
+                      _U.list([A2($Html.h1,
+                              _U.list([]),
+                              _U.list([$Html.text("Display Name")]))
+                              ,A2($Html.button,
+                              _U.list([$Html$Attributes.$class("sort")
+                                      ,A2($Html$Events.onClick,address,SortBy("name"))]),
+                              _U.list([$Html.text("sort")]))]))
+                      ,A2($Html.li,
+                      _U.list([$Html$Attributes.$class("manifest_header_item")]),
+                      _U.list([A2($Html.h1,
+                              _U.list([]),
+                              _U.list([$Html.text("Catalogs")]))
+                              ,A2($Html.button,
+                              _U.list([$Html$Attributes.$class("sort")
+                                      ,A2($Html$Events.onClick,address,SortBy("name"))]),
+                              _U.list([$Html.text("sort")]))]))]))
+              ,A2($Html.div,_U.list([]),manifestItems)]));
+   });
+   var view = F2(function (address,model) {
+      return A2($Html.div,
+      _U.list([$Html$Attributes.id("container")]),
+      _U.list([A2(manifestCollection,address,model.manifests)]));
+   });
+   var GetManifests = function (a) {
+      return {ctor: "GetManifests",_0: a};
+   };
+   var NoOp = {ctor: "NoOp"};
+   var Manifest = F3(function (a,b,c) {
+      return {name: a,catalogs: b,displayName: c};
+   });
+   var manifest = A4($Json$Decode.object3,
+   Manifest,
+   A2($Json$Decode._op[":="],"filename",$Json$Decode.string),
+   $Json$Decode.maybe(A2($Json$Decode._op[":="],
+   "catalogs",
+   $Json$Decode.list($Json$Decode.string))),
+   $Json$Decode.maybe(A2($Json$Decode._op[":="],
+   "display_name",
+   $Json$Decode.string)));
+   var getManifests = $Effects.task(A2($Task.map,
+   GetManifests,
+   $Task.toResult(A2($Http.get,
+   $Json$Decode.list(manifest),
+   "http://localhost:3000/api/manifests"))));
+   var init = {ctor: "_Tuple2"
+              ,_0: {manifests: _U.list([])}
+              ,_1: getManifests};
+   var Model = function (a) {    return {manifests: a};};
+   var app = $StartApp.start({init: init
+                             ,update: update
+                             ,view: view
+                             ,inputs: _U.list([])});
+   var main = app.html;
+   var tasks = Elm.Native.Task.make(_elm).performSignal("tasks",
+   app.tasks);
+   return _elm.Manifests.values = {_op: _op
+                                  ,app: app
+                                  ,main: main
+                                  ,Model: Model
+                                  ,Manifest: Manifest
+                                  ,manifest: manifest
+                                  ,init: init
+                                  ,NoOp: NoOp
+                                  ,GetManifests: GetManifests
+                                  ,SortBy: SortBy
+                                  ,update: update
+                                  ,getManifests: getManifests
+                                  ,reportError: reportError
+                                  ,firstCatalog: firstCatalog
+                                  ,manifestRow: manifestRow
+                                  ,manifestCollection: manifestCollection
+                                  ,view: view};
+};
