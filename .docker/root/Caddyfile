@@ -1,6 +1,14 @@
-0.0.0.0:{$CADDY_PORT}
+{$MUNKI_HOSTNAME}:{$MUNKI_PORT}
 
 gzip
 errors
 log stdout
+root /data
+browse /
+rewrite /repo {
+    r  (.*)
+    to /{1}
+}
+tls {$MUNKI_TLS_EMAIL}
 ape {$MUNKI_REPO_PATH}
+basicauth /repo {$MUNKI_AUTH_USER} {$MUNKI_AUTH_PASSWORD}

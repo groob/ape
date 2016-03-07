@@ -1,10 +1,16 @@
 FROM alpine
 ENV MUNKI_REPO_PATH=/data
-ENV CADDY_PORT=443
+ENV MUNKI_HOSTNAME=0.0.0.0
+ENV MUNKI_PORT=443
+ENV MUNKI_TLS_EMAIL=""
+ENV MUNKI_AUTH_USER="munki"
+ENV MUNKI_AUTH_PASSWORD="secret"
+
+
+RUN apk --no-cache add git ca-certificates 
 
 COPY root /
 
-RUN mkdir -p /data/pkgsinfo /data/pkgs /data/catalogs /data/manifests
 VOLUME /data
 EXPOSE 80 443 2015
 

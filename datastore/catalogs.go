@@ -57,8 +57,8 @@ func (r *SimpleRepo) saveCatalog(name string, catalogs *models.Catalogs) error {
 func (r *SimpleRepo) WatchCatalogs() {
 	done := make(chan bool, 1)
 	for {
+		<-makecatalogs
 		go r.makeCatalogs(done)
 		<-done
-		<-makecatalogs
 	}
 }
