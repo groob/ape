@@ -1,0 +1,6 @@
+0.0.0.0:{$CADDY_PORT}
+
+gzip
+errors
+log stdout
+ape {$MUNKI_REPO_PATH}
