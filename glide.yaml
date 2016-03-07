@@ -1,0 +1,8 @@
+package: github.com/groob/ape
+import:
+- package: github.com/dgrijalva/jwt-go
+- package: github.com/groob/plist
+- package: github.com/julienschmidt/httprouter
+- package: golang.org/x/crypto
+  subpackages:
+  - bcrypt
