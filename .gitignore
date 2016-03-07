@@ -1,4 +1,5 @@
 .docker/root/ape
+.docker/root/data
 customCaddy
 ape
 bak

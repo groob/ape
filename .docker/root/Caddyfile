@@ -4,11 +4,8 @@ gzip
 errors
 log stdout
 root /data
-browse /
-rewrite /repo {
-    r  (.*)
-    to /{1}
-}
+browse /repo
 tls {$MUNKI_TLS_EMAIL}
 ape {$MUNKI_REPO_PATH}
-basicauth /repo {$MUNKI_AUTH_USER} {$MUNKI_AUTH_PASSWORD}
+# basicauth /repo {$MUNKI_AUTH_USER} {$MUNKI_AUTH_PASSWORD}
+# basicauth /admin {$MUNKI_AUTH_USER} {$MUNKI_AUTH_PASSWORD}

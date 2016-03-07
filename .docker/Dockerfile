@@ -11,7 +11,7 @@ RUN apk --no-cache add git ca-certificates
 
 COPY root /
 
-VOLUME /data
+VOLUME /data/repo
 EXPOSE 80 443 2015
 
 CMD ["/ape"]
