@@ -89,7 +89,7 @@ update action model =
 
 
 getManifests =
-  Http.get (Json.Decode.list manifest) "http://localhost:3000/api/manifests"
+  Http.get (Json.Decode.list manifest) "/api/manifests"
     |> Task.toResult
     |> Task.map GetManifests
     |> Effects.task

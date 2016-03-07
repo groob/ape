@@ -12329,7 +12329,7 @@ Elm.Manifests.make = function (_elm) {
    GetManifests,
    $Task.toResult(A2($Http.get,
    $Json$Decode.list(manifest),
-   "http://localhost:3000/api/manifests"))));
+   "/api/manifests"))));
    var init = {ctor: "_Tuple2"
               ,_0: {manifests: _U.list([])}
               ,_1: getManifests};

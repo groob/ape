@@ -1,0 +1,8 @@
+0.0.0.0
+
+gzip
+errors
+log stdout
+root /Users/vvrantch/code/go/src/github.com/groob/ape
+ape /Users/vvrantch/code/go/src/github.com/groob/ape/repo
+browse /repo
