@@ -27,6 +27,7 @@ func handlePkgsCreate(db datastore.Datastore) httprouter.Handle {
 				fmt.Errorf("Failed to save file: %v", err))
 			return
 		}
+		rw.WriteHeader(http.StatusCreated)
 	}
 }
 
