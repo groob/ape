@@ -33,7 +33,7 @@ func main() {
 	// create handler
 	apiHandler := api.NewServer(opts...)
 	http.Handle("/", apiHandler)
-	// serve http or https
+	http.Handle("/admin/", http.FileServer(http.Dir(".")))
 	serve()
 }
 

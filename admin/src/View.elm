@@ -5,6 +5,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Models exposing (..)
 import Update exposing (..)
+import Routing
 
 
 firstCatalog : Maybe (List String) -> String
@@ -72,7 +73,41 @@ manifestCollection address manifests =
       ]
 
 
-view address model =
+manifestPageView address model =
   div
-    [ id "container" ]
-    [ manifestCollection address model.manifests ]
+    [ id "admin-page" ]
+    [ div
+        [ id "navbar" ]
+        [ h1 [ onClick address Manifests ] [ text "Manifests" ]
+        , h1 [] [ text "Pkgsinfos" ]
+        ]
+    , div
+        []
+        [ manifestView address model.manifests ]
+    ]
+
+
+pageView : Signal.Address Action -> Model -> Html
+pageView address model =
+  case model.routing.route of
+    Routing.ManifestRoute ->
+      div [] [ h2 [] [ text "About" ] ]
+
+    Routing.NotFoundRoute ->
+      div [] [ h2 [] [ text "Not found" ] ]
+
+
+view address model =
+  pageView address model
+
+
+manifestView address manifests =
+  div
+    []
+    [ div
+        [ id "reset" ]
+        [ button [ class "reset", onClick address Reset ] [ text "reset" ] ]
+    , div
+        [ id "container" ]
+        [ manifestCollection address manifests ]
+    ]

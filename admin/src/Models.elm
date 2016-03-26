@@ -3,11 +3,13 @@ module Models (..) where
 import Json.Decode exposing ((:=))
 import Json.Encode exposing (..)
 import Effects exposing (Effects, Never)
+import Routing
 
 
 type alias Model =
   { manifests : List Manifest
   , pkgsinfos : List Pkgsinfo
+  , routing : Routing.Model
   }
 
 

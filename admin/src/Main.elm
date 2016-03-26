@@ -2,9 +2,10 @@ module Main (..) where
 
 import Effects exposing (Effects, Never)
 import Http
-import Task exposing (Task, andThen)
+import Task exposing (Task)
 import Signal exposing (Address)
 import StartApp
+import Routing
 import Debug
 
 
@@ -19,6 +20,7 @@ init : ( Model, Effects Action )
 init =
   ( { manifests = []
     , pkgsinfos = []
+    , routing = Routing.initialModel
     }
   , getManifests
   )
@@ -29,8 +31,13 @@ app =
     { init = init
     , update = update
     , view = view
-    , inputs = []
+    , inputs = [ routerSignal ]
     }
+
+
+routerSignal : Signal Action
+routerSignal =
+  Signal.map RoutingAction Routing.signal
 
 
 port tasks : Signal (Task.Task Never ())

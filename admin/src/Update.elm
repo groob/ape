@@ -6,18 +6,35 @@ import Models exposing (..)
 import Effects exposing (Effects)
 import Json.Decode exposing ((:=))
 import Json.Encode exposing (..)
+import Routing
 
 
 type Action
   = NoOp
+  | Manifests
+  | Reset
   | GetManifests (Result Http.Error (List Manifest))
   | SortBy String
+  | RoutingAction Routing.Action
 
 
 update action model =
-  case action of
+  case (Debug.log "action" action) of
+    RoutingAction subAction ->
+      let
+        ( updatedRouting, fx ) =
+          Routing.update subAction model.routing
+      in
+        ( { model | routing = updatedRouting }, Effects.map RoutingAction fx )
+
+    Reset ->
+      ( { model | manifests = [] }, Effects.none )
+
     NoOp ->
       ( model, Effects.none )
+
+    Manifests ->
+      ( model, getManifests )
 
     GetManifests result ->
       case result of

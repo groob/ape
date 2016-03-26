@@ -14,13 +14,14 @@ div#manifests {
     width: 700px;
     margin: 50px auto;
     padding: 0px 50px;
-    height: 0px;
+    /* height: 0px; */
     display: flex;
     align-items: right;
     flex-direction: column;
     list-style: none;
     text-align: left;
 }
+
 .manifestrow {
     display: -webkit-flex;
     display: flex;
