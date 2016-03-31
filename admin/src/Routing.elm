@@ -9,14 +9,10 @@ import Hop.Matchers exposing (match1, match2, match3, int)
 
 
 type Route
-  = ManifestRoute
+  = AdminHome
+  | ManifestCollectionRoute
+  | PkgsInfoCollectionRoute
   | NotFoundRoute
-
-
-type Action
-  = HopAction ()
-  | ApplyRoute ( Route, Location )
-  | NavigateTo String
 
 
 type alias Model =
@@ -28,8 +24,14 @@ type alias Model =
 initialModel : Model
 initialModel =
   { location = newLocation
-  , route = ManifestRoute
+  , route = AdminHome
   }
+
+
+type Action
+  = HopAction ()
+  | ApplyRoute ( Route, Location )
+  | NavigateTo String
 
 
 update : Action -> Model -> ( Model, Effects Action )
@@ -47,17 +49,24 @@ update action model =
 
 indexMatcher : PathMatcher Route
 indexMatcher =
-  match1 ManifestRoute "/admin/"
+  match1 AdminHome "/"
 
 
 manifestCollectionMatcher : PathMatcher Route
 manifestCollectionMatcher =
-  match1 ManifestRoute "/admin/manifests/"
+  match1 ManifestCollectionRoute "/manifests"
+
+
+pkgsinfoCollectionMatcher : PathMatcher Route
+pkgsinfoCollectionMatcher =
+  match1 PkgsInfoCollectionRoute "/pkgsinfo"
 
 
 matchers : List (PathMatcher Route)
 matchers =
   [ indexMatcher
+  , manifestCollectionMatcher
+  , pkgsinfoCollectionMatcher
   ]
 
 

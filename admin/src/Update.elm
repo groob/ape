@@ -7,15 +7,15 @@ import Effects exposing (Effects)
 import Json.Decode exposing ((:=))
 import Json.Encode exposing (..)
 import Routing
+import Manifests.Actions
+import Manifests.Update
+import Manifests.Models
 
 
 type Action
   = NoOp
-  | Manifests
-  | Reset
-  | GetManifests (Result Http.Error (List Manifest))
-  | SortBy String
   | RoutingAction Routing.Action
+  | ManifestAction Manifests.Actions.Action
 
 
 update action model =
@@ -27,36 +27,18 @@ update action model =
       in
         ( { model | routing = updatedRouting }, Effects.map RoutingAction fx )
 
-    Reset ->
-      ( { model | manifests = [] }, Effects.none )
-
     NoOp ->
       ( model, Effects.none )
 
-    Manifests ->
-      ( model, getManifests )
+    ManifestAction subAction ->
+      let
+        updatedModel =
+          { manifests = model.manifests }
 
-    GetManifests result ->
-      case result of
-        Ok manifests ->
-          ( { model | manifests = manifests }, Effects.none )
-
-        Err error ->
-          let
-            _ =
-              reportError error
-          in
-            ( model, Effects.none )
-
-    SortBy filter ->
-      ( { model | manifests = (List.reverse model.manifests) }, Effects.none )
-
-
-getManifests =
-  Http.get (Json.Decode.list manifest) "/api/manifests"
-    |> Task.toResult
-    |> Task.map GetManifests
-    |> Effects.task
+        ( manifestsX, fx ) =
+          Manifests.Update.update subAction updatedModel
+      in
+        ( { model | manifests = manifestsX.manifests }, Effects.map ManifestAction fx )
 
 
 reportError : Http.Error -> Http.Error

@@ -7,6 +7,8 @@ import Signal exposing (Address)
 import StartApp
 import Routing
 import Debug
+import Manifests.Update
+import Manifests.Models
 
 
 -- app imports
@@ -18,12 +20,19 @@ import Update exposing (..)
 
 init : ( Model, Effects Action )
 init =
-  ( { manifests = []
-    , pkgsinfos = []
-    , routing = Routing.initialModel
-    }
-  , getManifests
-  )
+  let
+    fxs =
+      [ Effects.map ManifestAction Manifests.Update.getManifests ]
+
+    fx =
+      Effects.batch fxs
+  in
+    ( { manifests = []
+      , pkgsinfos = []
+      , routing = Routing.initialModel
+      }
+    , fx
+    )
 
 
 app =
