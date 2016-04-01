@@ -4,8 +4,13 @@ import Manifests.Actions exposing (..)
 import Manifests.Models exposing (..)
 import Effects exposing (Effects)
 import Http
+import Hop
+import Hop.Navigate exposing (navigateTo)
 import Task exposing (Task, andThen)
 import Json.Decode exposing ((:=))
+import Html exposing (Attribute)
+import Html.Events exposing (on, targetValue)
+import Signal exposing (Address)
 
 
 update action model =
@@ -25,12 +30,71 @@ update action model =
     SortBy filter ->
       ( { model | manifests = (List.reverse model.manifests) }, Effects.none )
 
+    EditManifest id ->
+      let
+        path =
+          "/manifests/" ++ id ++ "/edit"
+
+        filterByID : String -> List Manifest -> Maybe Manifest
+        filterByID id manifests =
+          manifests
+            |> List.filter (\manifest -> manifest.name == id)
+            |> List.head
+
+        manifest : Maybe Manifest
+        manifest =
+          filterByID id model.manifests
+
+        defaultManifest : Manifest
+        defaultManifest =
+          { name = "foo"
+          , catalogs = Nothing
+          , displayName = Nothing
+          }
+      in
+        ( { model | manifestForm = Just defaultManifest }, (Effects.map HopAction (navigateTo path)) )
+
+    DiscardSave ->
+      ( model, Effects.map HopAction (navigateTo "/manifests") )
+
+    UpdateDisplayName contents ->
+      let
+        defaultManifest : Manifest
+        defaultManifest =
+          { name = "foo"
+          , catalogs = Nothing
+          , displayName = Nothing
+          }
+      in
+        ( { model | manifestForm = Just defaultManifest }, Effects.none )
+
+    Save manifest ->
+      let
+        updateManifest existing =
+          if existing.name == manifest.name then
+            { existing | displayName = manifest.displayName }
+          else
+            existing
+
+        updatedCollection =
+          List.map updateManifest model.manifests
+      in
+        ( { model | manifests = updatedCollection }, Effects.map HopAction (navigateTo "/manifests") )
+
+    HopAction _ ->
+      ( model, Effects.none )
+
 
 getManifests =
   Http.get (Json.Decode.list manifest) "/api/manifests"
     |> Task.toResult
     |> Task.map GetManifests
     |> Effects.task
+
+
+onInput : Address a -> (String -> a) -> Attribute
+onInput address f =
+  on "input" targetValue (\v -> Signal.message address (f v))
 
 
 reportError : Http.Error -> Http.Error

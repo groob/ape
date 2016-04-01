@@ -13681,9 +13681,6 @@ Elm.Routing.make = function (_elm) {
    $Signal = Elm.Signal.make(_elm),
    $Task = Elm.Task.make(_elm);
    var _op = {};
-   var Model = F2(function (a,b) {
-      return {location: a,route: b};
-   });
    var NavigateTo = function (a) {
       return {ctor: "NavigateTo",_0: a};
    };
@@ -13706,42 +13703,67 @@ Elm.Routing.make = function (_elm) {
                                    ,_1: $Effects.none};
          default: return {ctor: "_Tuple2",_0: model,_1: $Effects.none};}
    });
+   var Model = F2(function (a,b) {
+      return {location: a,route: b};
+   });
    var NotFoundRoute = {ctor: "NotFoundRoute"};
-   var ManifestRoute = {ctor: "ManifestRoute"};
+   var ManifestEditRoute = function (a) {
+      return {ctor: "ManifestEditRoute",_0: a};
+   };
+   var manifestEditMatcher = A4($Hop$Matchers.match3,
+   ManifestEditRoute,
+   "/manifests/",
+   $Hop$Matchers.str,
+   "/edit");
+   var PkgsInfoCollectionRoute = {ctor: "PkgsInfoCollectionRoute"};
+   var pkgsinfoCollectionMatcher = A2($Hop$Matchers.match1,
+   PkgsInfoCollectionRoute,
+   "/pkgsinfo");
+   var ManifestCollectionRoute = {ctor: "ManifestCollectionRoute"};
+   var manifestCollectionMatcher = A2($Hop$Matchers.match1,
+   ManifestCollectionRoute,
+   "/manifests");
+   var AdminHome = {ctor: "AdminHome"};
    var initialModel = {location: $Hop$Types.newLocation
-                      ,route: ManifestRoute};
-   var indexMatcher = A2($Hop$Matchers.match1,
-   ManifestRoute,
-   "/admin/");
-   var matchers = _U.list([indexMatcher]);
+                      ,route: AdminHome};
+   var indexMatcher = A2($Hop$Matchers.match1,AdminHome,"/");
+   var matchers = _U.list([indexMatcher
+                          ,manifestCollectionMatcher
+                          ,pkgsinfoCollectionMatcher
+                          ,manifestEditMatcher]);
    var router = $Hop.$new({matchers: matchers
                           ,notFound: NotFoundRoute});
    var run = router.run;
    var signal = A2($Signal.map,ApplyRoute,router.signal);
-   var manifestCollectionMatcher = A2($Hop$Matchers.match1,
-   ManifestRoute,
-   "/admin/manifests/");
    return _elm.Routing.values = {_op: _op
-                                ,ManifestRoute: ManifestRoute
+                                ,AdminHome: AdminHome
+                                ,ManifestCollectionRoute: ManifestCollectionRoute
+                                ,PkgsInfoCollectionRoute: PkgsInfoCollectionRoute
+                                ,ManifestEditRoute: ManifestEditRoute
                                 ,NotFoundRoute: NotFoundRoute
+                                ,Model: Model
+                                ,initialModel: initialModel
                                 ,HopAction: HopAction
                                 ,ApplyRoute: ApplyRoute
                                 ,NavigateTo: NavigateTo
-                                ,Model: Model
-                                ,initialModel: initialModel
                                 ,update: update
                                 ,indexMatcher: indexMatcher
                                 ,manifestCollectionMatcher: manifestCollectionMatcher
+                                ,pkgsinfoCollectionMatcher: pkgsinfoCollectionMatcher
+                                ,manifestEditMatcher: manifestEditMatcher
                                 ,matchers: matchers
                                 ,router: router
                                 ,run: run
                                 ,signal: signal};
 };
-Elm.Models = Elm.Models || {};
-Elm.Models.make = function (_elm) {
+Elm.Manifests = Elm.Manifests || {};
+Elm.Manifests.Models = Elm.Manifests.Models || {};
+Elm.Manifests.Models.make = function (_elm) {
    "use strict";
-   _elm.Models = _elm.Models || {};
-   if (_elm.Models.values) return _elm.Models.values;
+   _elm.Manifests = _elm.Manifests || {};
+   _elm.Manifests.Models = _elm.Manifests.Models || {};
+   if (_elm.Manifests.Models.values)
+   return _elm.Manifests.Models.values;
    var _U = Elm.Native.Utils.make(_elm),
    $Basics = Elm.Basics.make(_elm),
    $Debug = Elm.Debug.make(_elm),
@@ -13749,7 +13771,6 @@ Elm.Models.make = function (_elm) {
    $List = Elm.List.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
    $Result = Elm.Result.make(_elm),
-   $Routing = Elm.Routing.make(_elm),
    $Signal = Elm.Signal.make(_elm);
    var _op = {};
    var Manifest = F3(function (a,b,c) {
@@ -13764,32 +13785,74 @@ Elm.Models.make = function (_elm) {
    $Json$Decode.maybe(A2($Json$Decode._op[":="],
    "display_name",
    $Json$Decode.string)));
-   var Pkgsinfo = function (a) {    return {name: a};};
-   var Model = F3(function (a,b,c) {
-      return {manifests: a,pkgsinfos: b,routing: c};
-   });
-   return _elm.Models.values = {_op: _op
-                               ,Model: Model
-                               ,Pkgsinfo: Pkgsinfo
-                               ,Manifest: Manifest
-                               ,manifest: manifest};
+   return _elm.Manifests.Models.values = {_op: _op
+                                         ,Manifest: Manifest
+                                         ,manifest: manifest};
 };
-Elm.Update = Elm.Update || {};
-Elm.Update.make = function (_elm) {
+Elm.Manifests = Elm.Manifests || {};
+Elm.Manifests.Actions = Elm.Manifests.Actions || {};
+Elm.Manifests.Actions.make = function (_elm) {
    "use strict";
-   _elm.Update = _elm.Update || {};
-   if (_elm.Update.values) return _elm.Update.values;
+   _elm.Manifests = _elm.Manifests || {};
+   _elm.Manifests.Actions = _elm.Manifests.Actions || {};
+   if (_elm.Manifests.Actions.values)
+   return _elm.Manifests.Actions.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Http = Elm.Http.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Manifests$Models = Elm.Manifests.Models.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var _op = {};
+   var HopAction = function (a) {
+      return {ctor: "HopAction",_0: a};
+   };
+   var SortBy = function (a) {    return {ctor: "SortBy",_0: a};};
+   var Save = function (a) {    return {ctor: "Save",_0: a};};
+   var UpdateDisplayName = function (a) {
+      return {ctor: "UpdateDisplayName",_0: a};
+   };
+   var DiscardSave = {ctor: "DiscardSave"};
+   var EditManifest = function (a) {
+      return {ctor: "EditManifest",_0: a};
+   };
+   var GetManifests = function (a) {
+      return {ctor: "GetManifests",_0: a};
+   };
+   return _elm.Manifests.Actions.values = {_op: _op
+                                          ,GetManifests: GetManifests
+                                          ,EditManifest: EditManifest
+                                          ,DiscardSave: DiscardSave
+                                          ,UpdateDisplayName: UpdateDisplayName
+                                          ,Save: Save
+                                          ,SortBy: SortBy
+                                          ,HopAction: HopAction};
+};
+Elm.Manifests = Elm.Manifests || {};
+Elm.Manifests.Update = Elm.Manifests.Update || {};
+Elm.Manifests.Update.make = function (_elm) {
+   "use strict";
+   _elm.Manifests = _elm.Manifests || {};
+   _elm.Manifests.Update = _elm.Manifests.Update || {};
+   if (_elm.Manifests.Update.values)
+   return _elm.Manifests.Update.values;
    var _U = Elm.Native.Utils.make(_elm),
    $Basics = Elm.Basics.make(_elm),
    $Debug = Elm.Debug.make(_elm),
    $Effects = Elm.Effects.make(_elm),
+   $Hop$Navigate = Elm.Hop.Navigate.make(_elm),
+   $Html = Elm.Html.make(_elm),
+   $Html$Events = Elm.Html.Events.make(_elm),
    $Http = Elm.Http.make(_elm),
    $Json$Decode = Elm.Json.Decode.make(_elm),
    $List = Elm.List.make(_elm),
+   $Manifests$Actions = Elm.Manifests.Actions.make(_elm),
+   $Manifests$Models = Elm.Manifests.Models.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
-   $Models = Elm.Models.make(_elm),
    $Result = Elm.Result.make(_elm),
-   $Routing = Elm.Routing.make(_elm),
    $Signal = Elm.Signal.make(_elm),
    $Task = Elm.Task.make(_elm);
    var _op = {};
@@ -13811,18 +13874,157 @@ Elm.Update.make = function (_elm) {
            A2($Basics._op["++"],"/",_p0._1))),
            error);}
    };
+   var onInput = F2(function (address,f) {
+      return A3($Html$Events.on,
+      "input",
+      $Html$Events.targetValue,
+      function (v) {
+         return A2($Signal.message,address,f(v));
+      });
+   });
+   var getManifests = $Effects.task(A2($Task.map,
+   $Manifests$Actions.GetManifests,
+   $Task.toResult(A2($Http.get,
+   $Json$Decode.list($Manifests$Models.manifest),
+   "/api/manifests"))));
+   var update = F2(function (action,model) {
+      var _p1 = action;
+      switch (_p1.ctor)
+      {case "GetManifests": var _p2 = _p1._0;
+           if (_p2.ctor === "Ok") {
+                 return {ctor: "_Tuple2"
+                        ,_0: _U.update(model,{manifests: _p2._0})
+                        ,_1: $Effects.none};
+              } else {
+                 var _p3 = reportError(_p2._0);
+                 return {ctor: "_Tuple2",_0: model,_1: $Effects.none};
+              }
+         case "SortBy": return {ctor: "_Tuple2"
+                               ,_0: _U.update(model,
+                               {manifests: $List.reverse(model.manifests)})
+                               ,_1: $Effects.none};
+         case "EditManifest": var _p4 = _p1._0;
+           var defaultManifest = {name: "foo"
+                                 ,catalogs: $Maybe.Nothing
+                                 ,displayName: $Maybe.Nothing};
+           var filterByID = F2(function (id,manifests) {
+              return $List.head(A2($List.filter,
+              function (manifest) {
+                 return _U.eq(manifest.name,id);
+              },
+              manifests));
+           });
+           var manifest = A2(filterByID,_p4,model.manifests);
+           var path = A2($Basics._op["++"],
+           "/manifests/",
+           A2($Basics._op["++"],_p4,"/edit"));
+           return {ctor: "_Tuple2"
+                  ,_0: _U.update(model,
+                  {manifestForm: $Maybe.Just(defaultManifest)})
+                  ,_1: A2($Effects.map,
+                  $Manifests$Actions.HopAction,
+                  $Hop$Navigate.navigateTo(path))};
+         case "DiscardSave": return {ctor: "_Tuple2"
+                                    ,_0: model
+                                    ,_1: A2($Effects.map,
+                                    $Manifests$Actions.HopAction,
+                                    $Hop$Navigate.navigateTo("/manifests"))};
+         case "UpdateDisplayName": var defaultManifest = {name: "foo"
+                                                         ,catalogs: $Maybe.Nothing
+                                                         ,displayName: $Maybe.Nothing};
+           return {ctor: "_Tuple2"
+                  ,_0: _U.update(model,
+                  {manifestForm: $Maybe.Just(defaultManifest)})
+                  ,_1: $Effects.none};
+         case "Save": var _p5 = _p1._0;
+           var updateManifest = function (existing) {
+              return _U.eq(existing.name,_p5.name) ? _U.update(existing,
+              {displayName: _p5.displayName}) : existing;
+           };
+           var updatedCollection = A2($List.map,
+           updateManifest,
+           model.manifests);
+           return {ctor: "_Tuple2"
+                  ,_0: _U.update(model,{manifests: updatedCollection})
+                  ,_1: A2($Effects.map,
+                  $Manifests$Actions.HopAction,
+                  $Hop$Navigate.navigateTo("/manifests"))};
+         default: return {ctor: "_Tuple2",_0: model,_1: $Effects.none};}
+   });
+   return _elm.Manifests.Update.values = {_op: _op
+                                         ,update: update
+                                         ,getManifests: getManifests
+                                         ,onInput: onInput
+                                         ,reportError: reportError};
+};
+Elm.Models = Elm.Models || {};
+Elm.Models.make = function (_elm) {
+   "use strict";
+   _elm.Models = _elm.Models || {};
+   if (_elm.Models.values) return _elm.Models.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Manifests$Models = Elm.Manifests.Models.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Routing = Elm.Routing.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var _op = {};
+   var Pkgsinfo = function (a) {    return {name: a};};
+   var Model = F4(function (a,b,c,d) {
+      return {manifests: a
+             ,manifestForm: b
+             ,pkgsinfos: c
+             ,routing: d};
+   });
+   return _elm.Models.values = {_op: _op
+                               ,Model: Model
+                               ,Pkgsinfo: Pkgsinfo};
+};
+Elm.Update = Elm.Update || {};
+Elm.Update.make = function (_elm) {
+   "use strict";
+   _elm.Update = _elm.Update || {};
+   if (_elm.Update.values) return _elm.Update.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Effects = Elm.Effects.make(_elm),
+   $Http = Elm.Http.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Manifests$Actions = Elm.Manifests.Actions.make(_elm),
+   $Manifests$Update = Elm.Manifests.Update.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Routing = Elm.Routing.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var _op = {};
+   var reportError = function (error) {
+      var _p0 = error;
+      switch (_p0.ctor)
+      {case "Timeout": return A2($Debug.log,"API timeout",error);
+         case "NetworkError": return A2($Debug.log,
+           "Network error contacting API",
+           error);
+         case "UnexpectedPayload": return A2($Debug.log,
+           A2($Basics._op["++"],"Unexpected payload from API: ",_p0._0),
+           error);
+         default: return A2($Debug.log,
+           A2($Basics._op["++"],
+           "Unexpected status/payload from API: ",
+           A2($Basics._op["++"],
+           $Basics.toString(_p0._0),
+           A2($Basics._op["++"],"/",_p0._1))),
+           error);}
+   };
+   var ManifestAction = function (a) {
+      return {ctor: "ManifestAction",_0: a};
+   };
    var RoutingAction = function (a) {
       return {ctor: "RoutingAction",_0: a};
    };
-   var SortBy = function (a) {    return {ctor: "SortBy",_0: a};};
-   var GetManifests = function (a) {
-      return {ctor: "GetManifests",_0: a};
-   };
-   var getManifests = $Effects.task(A2($Task.map,
-   GetManifests,
-   $Task.toResult(A2($Http.get,
-   $Json$Decode.list($Models.manifest),
-   "/api/manifests"))));
    var update = F2(function (action,model) {
       var _p1 = A2($Debug.log,"action",action);
       switch (_p1.ctor)
@@ -13834,48 +14036,62 @@ Elm.Update.make = function (_elm) {
            return {ctor: "_Tuple2"
                   ,_0: _U.update(model,{routing: updatedRouting})
                   ,_1: A2($Effects.map,RoutingAction,fx)};
-         case "Reset": return {ctor: "_Tuple2"
-                              ,_0: _U.update(model,{manifests: _U.list([])})
-                              ,_1: $Effects.none};
          case "NoOp": return {ctor: "_Tuple2"
                              ,_0: model
                              ,_1: $Effects.none};
-         case "Manifests": return {ctor: "_Tuple2"
-                                  ,_0: model
-                                  ,_1: getManifests};
-         case "GetManifests": var _p3 = _p1._0;
-           if (_p3.ctor === "Ok") {
-                 return {ctor: "_Tuple2"
-                        ,_0: _U.update(model,{manifests: _p3._0})
-                        ,_1: $Effects.none};
-              } else {
-                 var _p4 = reportError(_p3._0);
-                 return {ctor: "_Tuple2",_0: model,_1: $Effects.none};
-              }
-         default: return {ctor: "_Tuple2"
-                         ,_0: _U.update(model,
-                         {manifests: $List.reverse(model.manifests)})
-                         ,_1: $Effects.none};}
+         default: var updatedModel = {manifests: model.manifests};
+           var _p3 = A2($Manifests$Update.update,_p1._0,updatedModel);
+           var manifestsX = _p3._0;
+           var fx = _p3._1;
+           return {ctor: "_Tuple2"
+                  ,_0: _U.update(model,{manifests: manifestsX.manifests})
+                  ,_1: A2($Effects.map,ManifestAction,fx)};}
    });
-   var Reset = {ctor: "Reset"};
-   var Manifests = {ctor: "Manifests"};
    var NoOp = {ctor: "NoOp"};
    return _elm.Update.values = {_op: _op
                                ,NoOp: NoOp
-                               ,Manifests: Manifests
-                               ,Reset: Reset
-                               ,GetManifests: GetManifests
-                               ,SortBy: SortBy
                                ,RoutingAction: RoutingAction
+                               ,ManifestAction: ManifestAction
                                ,update: update
-                               ,getManifests: getManifests
                                ,reportError: reportError};
 };
-Elm.View = Elm.View || {};
-Elm.View.make = function (_elm) {
+Elm.Manifests = Elm.Manifests || {};
+Elm.Manifests.Utils = Elm.Manifests.Utils || {};
+Elm.Manifests.Utils.make = function (_elm) {
    "use strict";
-   _elm.View = _elm.View || {};
-   if (_elm.View.values) return _elm.View.values;
+   _elm.Manifests = _elm.Manifests || {};
+   _elm.Manifests.Utils = _elm.Manifests.Utils || {};
+   if (_elm.Manifests.Utils.values)
+   return _elm.Manifests.Utils.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Html = Elm.Html.make(_elm),
+   $Html$Events = Elm.Html.Events.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var _op = {};
+   var onInput = F2(function (address,f) {
+      return A3($Html$Events.on,
+      "input",
+      $Html$Events.targetValue,
+      function (v) {
+         return A2($Signal.message,address,f(v));
+      });
+   });
+   return _elm.Manifests.Utils.values = {_op: _op
+                                        ,onInput: onInput};
+};
+Elm.Manifests = Elm.Manifests || {};
+Elm.Manifests.View = Elm.Manifests.View || {};
+Elm.Manifests.View.make = function (_elm) {
+   "use strict";
+   _elm.Manifests = _elm.Manifests || {};
+   _elm.Manifests.View = _elm.Manifests.View || {};
+   if (_elm.Manifests.View.values)
+   return _elm.Manifests.View.values;
    var _U = Elm.Native.Utils.make(_elm),
    $Basics = Elm.Basics.make(_elm),
    $Debug = Elm.Debug.make(_elm),
@@ -13883,36 +14099,63 @@ Elm.View.make = function (_elm) {
    $Html$Attributes = Elm.Html.Attributes.make(_elm),
    $Html$Events = Elm.Html.Events.make(_elm),
    $List = Elm.List.make(_elm),
+   $Manifests$Actions = Elm.Manifests.Actions.make(_elm),
+   $Manifests$Models = Elm.Manifests.Models.make(_elm),
+   $Manifests$Utils = Elm.Manifests.Utils.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
-   $Models = Elm.Models.make(_elm),
    $Result = Elm.Result.make(_elm),
-   $Routing = Elm.Routing.make(_elm),
-   $Signal = Elm.Signal.make(_elm),
-   $Update = Elm.Update.make(_elm);
+   $Signal = Elm.Signal.make(_elm);
    var _op = {};
-   var pageView = F2(function (address,model) {
-      var _p0 = model.routing.route;
-      if (_p0.ctor === "ManifestRoute") {
+   var manifestEdit = F2(function (address,manifest) {
+      var _p0 = manifest;
+      if (_p0.ctor === "Nothing") {
             return A2($Html.div,
             _U.list([]),
-            _U.list([A2($Html.h2,
-            _U.list([]),
-            _U.list([$Html.text("About")]))]));
+            _U.list([$Html.text("not found")]));
          } else {
+            var _p1 = _p0._0;
             return A2($Html.div,
             _U.list([]),
-            _U.list([A2($Html.h2,
-            _U.list([]),
-            _U.list([$Html.text("Not found")]))]));
+            _U.list([A2($Html.input,
+                    _U.list([$Html$Attributes.type$("text")
+                            ,$Html$Attributes.placeholder("Name")
+                            ,$Html$Attributes.value(_p1.name)
+                            ,$Html$Attributes.name("name")
+                            ,$Html$Attributes.autofocus(true)]),
+                    _U.list([]))
+                    ,A2($Html.input,
+                    _U.list([$Html$Attributes.type$("text")
+                            ,$Html$Attributes.placeholder("display name")
+                            ,$Html$Attributes.value(A2($Maybe.withDefault,
+                            "",
+                            _p1.displayName))
+                            ,$Html$Attributes.name("DisplayName")
+                            ,$Html$Attributes.autofocus(false)
+                            ,A2($Manifests$Utils.onInput,
+                            address,
+                            $Manifests$Actions.UpdateDisplayName)]),
+                    _U.list([]))
+                    ,A2($Html.button,
+                    _U.list([$Html$Attributes.$class("save")
+                            ,A2($Html$Events.onClick,
+                            address,
+                            $Manifests$Actions.Save(_p1))]),
+                    _U.list([$Html.text("save")]))
+                    ,A2($Html.button,
+                    _U.list([$Html$Attributes.$class("discard")
+                            ,A2($Html$Events.onClick,
+                            address,
+                            $Manifests$Actions.DiscardSave)]),
+                    _U.list([$Html.text("discard")]))]));
          }
    });
-   var view = F2(function (address,model) {
-      return A2(pageView,address,model);
-   });
+   var defaultManifest = {name: "foo"
+                         ,catalogs: $Maybe.Nothing
+                         ,displayName: $Maybe.Nothing};
    var firstCatalog = function (catalogs) {
-      var _p1 = catalogs;
-      if (_p1.ctor === "Just") {
-            return A2($Maybe.withDefault,"",$List.head(_p1._0));
+      var _p2 = catalogs;
+      if (_p2.ctor === "Just") {
+            return A2($Maybe.withDefault,"",$List.head(_p2._0));
          } else {
             return "";
          }
@@ -13930,7 +14173,12 @@ Elm.View.make = function (_elm) {
               manifest.displayName))]))
               ,A2($Html.li,
               _U.list([$Html$Attributes.$class("mitem")]),
-              _U.list([$Html.text(firstCatalog(manifest.catalogs))]))]));
+              _U.list([$Html.text(firstCatalog(manifest.catalogs))]))
+              ,A2($Html.button,
+              _U.list([A2($Html$Events.onClick,
+              address,
+              $Manifests$Actions.EditManifest(manifest.name))]),
+              _U.list([$Html.text("edit")]))]));
    });
    var manifestCollection = F2(function (address,manifests) {
       var manifestItems = A2($List.map,
@@ -13947,7 +14195,9 @@ Elm.View.make = function (_elm) {
                               _U.list([$Html.text("Manifest")]))
                               ,A2($Html.button,
                               _U.list([$Html$Attributes.$class("sort")
-                                      ,A2($Html$Events.onClick,address,$Update.SortBy("name"))]),
+                                      ,A2($Html$Events.onClick,
+                                      address,
+                                      $Manifests$Actions.SortBy("name"))]),
                               _U.list([$Html.text("sort")]))]))
                       ,A2($Html.li,
                       _U.list([$Html$Attributes.$class("manifest_header_item")]),
@@ -13956,7 +14206,9 @@ Elm.View.make = function (_elm) {
                               _U.list([$Html.text("Display Name")]))
                               ,A2($Html.button,
                               _U.list([$Html$Attributes.$class("sort")
-                                      ,A2($Html$Events.onClick,address,$Update.SortBy("name"))]),
+                                      ,A2($Html$Events.onClick,
+                                      address,
+                                      $Manifests$Actions.SortBy("name"))]),
                               _U.list([$Html.text("sort")]))]))
                       ,A2($Html.li,
                       _U.list([$Html$Attributes.$class("manifest_header_item")]),
@@ -13965,7 +14217,9 @@ Elm.View.make = function (_elm) {
                               _U.list([$Html.text("Catalogs")]))
                               ,A2($Html.button,
                               _U.list([$Html$Attributes.$class("sort")
-                                      ,A2($Html$Events.onClick,address,$Update.SortBy("name"))]),
+                                      ,A2($Html$Events.onClick,
+                                      address,
+                                      $Manifests$Actions.SortBy("name"))]),
                               _U.list([$Html.text("sort")]))]))]))
               ,A2($Html.div,_U.list([]),manifestItems)]));
    });
@@ -13973,36 +14227,67 @@ Elm.View.make = function (_elm) {
       return A2($Html.div,
       _U.list([]),
       _U.list([A2($Html.div,
-              _U.list([$Html$Attributes.id("reset")]),
-              _U.list([A2($Html.button,
-              _U.list([$Html$Attributes.$class("reset")
-                      ,A2($Html$Events.onClick,address,$Update.Reset)]),
-              _U.list([$Html.text("reset")]))]))
-              ,A2($Html.div,
-              _U.list([$Html$Attributes.id("container")]),
-              _U.list([A2(manifestCollection,address,manifests)]))]));
+      _U.list([$Html$Attributes.id("container")]),
+      _U.list([A2(manifestCollection,address,manifests)]))]));
    });
-   var manifestPageView = F2(function (address,model) {
-      return A2($Html.div,
-      _U.list([$Html$Attributes.id("admin-page")]),
-      _U.list([A2($Html.div,
-              _U.list([$Html$Attributes.id("navbar")]),
-              _U.list([A2($Html.h1,
-                      _U.list([A2($Html$Events.onClick,address,$Update.Manifests)]),
-                      _U.list([$Html.text("Manifests")]))
-                      ,A2($Html.h1,_U.list([]),_U.list([$Html.text("Pkgsinfos")]))]))
-              ,A2($Html.div,
-              _U.list([]),
-              _U.list([A2(manifestView,address,model.manifests)]))]));
+   return _elm.Manifests.View.values = {_op: _op
+                                       ,firstCatalog: firstCatalog
+                                       ,manifestRow: manifestRow
+                                       ,manifestCollection: manifestCollection
+                                       ,manifestView: manifestView
+                                       ,defaultManifest: defaultManifest
+                                       ,manifestEdit: manifestEdit};
+};
+Elm.View = Elm.View || {};
+Elm.View.make = function (_elm) {
+   "use strict";
+   _elm.View = _elm.View || {};
+   if (_elm.View.values) return _elm.View.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Html = Elm.Html.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Manifests$View = Elm.Manifests.View.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Models = Elm.Models.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Routing = Elm.Routing.make(_elm),
+   $Signal = Elm.Signal.make(_elm),
+   $Update = Elm.Update.make(_elm);
+   var _op = {};
+   var pageView = F2(function (address,model) {
+      var _p0 = model.routing.route;
+      switch (_p0.ctor)
+      {case "AdminHome": return A2($Html.div,
+           _U.list([]),
+           _U.list([A2($Html.h2,
+           _U.list([]),
+           _U.list([$Html.text("Manage Munki Home")]))]));
+         case "ManifestCollectionRoute":
+         return A2($Manifests$View.manifestView,
+           A2($Signal.forwardTo,address,$Update.ManifestAction),
+           model.manifests);
+         case "PkgsInfoCollectionRoute": return A2($Html.div,
+           _U.list([]),
+           _U.list([A2($Html.h2,
+           _U.list([]),
+           _U.list([$Html.text("PkgsInfo list")]))]));
+         case "NotFoundRoute": return A2($Html.div,
+           _U.list([]),
+           _U.list([A2($Html.h2,
+           _U.list([]),
+           _U.list([$Html.text("Not found")]))]));
+         default: return A2($Manifests$View.manifestEdit,
+           A2($Signal.forwardTo,address,$Update.ManifestAction),
+           model.manifestForm);}
+   });
+   var view = F2(function (address,model) {
+      return A2(pageView,address,model);
    });
    return _elm.View.values = {_op: _op
-                             ,firstCatalog: firstCatalog
-                             ,manifestRow: manifestRow
-                             ,manifestCollection: manifestCollection
-                             ,manifestPageView: manifestPageView
                              ,pageView: pageView
-                             ,view: view
-                             ,manifestView: manifestView};
+                             ,view: view};
 };
 Elm.Main = Elm.Main || {};
 Elm.Main.make = function (_elm) {
@@ -14014,6 +14299,7 @@ Elm.Main.make = function (_elm) {
    $Debug = Elm.Debug.make(_elm),
    $Effects = Elm.Effects.make(_elm),
    $List = Elm.List.make(_elm),
+   $Manifests$Update = Elm.Manifests.Update.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
    $Models = Elm.Models.make(_elm),
    $Result = Elm.Result.make(_elm),
@@ -14024,14 +14310,22 @@ Elm.Main.make = function (_elm) {
    $Update = Elm.Update.make(_elm),
    $View = Elm.View.make(_elm);
    var _op = {};
+   var routeRunTask = Elm.Native.Task.make(_elm).perform($Routing.run);
    var routerSignal = A2($Signal.map,
    $Update.RoutingAction,
    $Routing.signal);
-   var init = {ctor: "_Tuple2"
-              ,_0: {manifests: _U.list([])
-                   ,pkgsinfos: _U.list([])
-                   ,routing: $Routing.initialModel}
-              ,_1: $Update.getManifests};
+   var init = function () {
+      var fxs = _U.list([A2($Effects.map,
+      $Update.ManifestAction,
+      $Manifests$Update.getManifests)]);
+      var fx = $Effects.batch(fxs);
+      return {ctor: "_Tuple2"
+             ,_0: {manifests: _U.list([])
+                  ,pkgsinfos: _U.list([])
+                  ,manifestForm: $Maybe.Nothing
+                  ,routing: $Routing.initialModel}
+             ,_1: fx};
+   }();
    var app = $StartApp.start({init: init
                              ,update: $Update.update
                              ,view: $View.view

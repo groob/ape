@@ -6,6 +6,7 @@ import Manifests.Models exposing (Manifest, manifest)
 
 type alias Model =
   { manifests : List Manifest
+  , manifestForm : Maybe Manifest
   , pkgsinfos : List Pkgsinfo
   , routing : Routing.Model
   }

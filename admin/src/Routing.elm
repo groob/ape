@@ -5,13 +5,14 @@ import Effects exposing (Effects, Never)
 import Hop
 import Hop.Types exposing (Location, PathMatcher, Router, newLocation)
 import Hop.Navigate exposing (navigateTo)
-import Hop.Matchers exposing (match1, match2, match3, int)
+import Hop.Matchers exposing (match1, match2, match3, str)
 
 
 type Route
   = AdminHome
   | ManifestCollectionRoute
   | PkgsInfoCollectionRoute
+  | ManifestEditRoute String
   | NotFoundRoute
 
 
@@ -62,11 +63,17 @@ pkgsinfoCollectionMatcher =
   match1 PkgsInfoCollectionRoute "/pkgsinfo"
 
 
+manifestEditMatcher : PathMatcher Route
+manifestEditMatcher =
+  match3 ManifestEditRoute "/manifests/" str "/edit"
+
+
 matchers : List (PathMatcher Route)
 matchers =
   [ indexMatcher
   , manifestCollectionMatcher
   , pkgsinfoCollectionMatcher
+  , manifestEditMatcher
   ]
 
 

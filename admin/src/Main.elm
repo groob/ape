@@ -1,18 +1,13 @@
 module Main (..) where
 
 import Effects exposing (Effects, Never)
-import Http
 import Task exposing (Task)
 import Signal exposing (Address)
 import StartApp
 import Routing
-import Debug
 import Manifests.Update
 import Manifests.Models
-
-
--- app imports
-
+import Manifests.Models exposing (Manifest)
 import Models exposing (..)
 import View exposing (..)
 import Update exposing (..)
@@ -29,6 +24,7 @@ init =
   in
     ( { manifests = []
       , pkgsinfos = []
+      , manifestForm = Nothing
       , routing = Routing.initialModel
       }
     , fx
@@ -52,6 +48,11 @@ routerSignal =
 port tasks : Signal (Task.Task Never ())
 port tasks =
   app.tasks
+
+
+port routeRunTask : Task () ()
+port routeRunTask =
+  Routing.run
 
 
 main =
