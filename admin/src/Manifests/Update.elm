@@ -44,15 +44,8 @@ update action model =
         manifest : Maybe Manifest
         manifest =
           filterByID id model.manifests
-
-        defaultManifest : Manifest
-        defaultManifest =
-          { name = "foo"
-          , catalogs = Nothing
-          , displayName = Nothing
-          }
       in
-        ( { model | manifestForm = Just defaultManifest }, (Effects.map HopAction (navigateTo path)) )
+        ( { model | manifestForm = manifest }, (Effects.map HopAction (navigateTo path)) )
 
     DiscardSave ->
       ( model, Effects.map HopAction (navigateTo "/manifests") )
