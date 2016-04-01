@@ -94,9 +94,9 @@ defaultManifest =
 
 manifestEdit : Signal.Address Action -> Maybe Manifest -> Html
 manifestEdit address manifest =
-  case manifest of
+  case (Debug.log "manifest" manifest) of
     Nothing ->
-      div [] [ text "not found" ]
+      div [ onClick address NoOp ] [ text "not found" ]
 
     Just manifest ->
       div

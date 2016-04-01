@@ -12,3 +12,4 @@ type Action
   | Save Manifest
   | SortBy String
   | HopAction ()
+  | NoOp

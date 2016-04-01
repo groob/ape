@@ -24,8 +24,8 @@ pageView address model =
     Routing.NotFoundRoute ->
       div [] [ h2 [] [ text "Not found" ] ]
 
-    Routing.ManifestEditRoute id ->
-      manifestEdit (Signal.forwardTo address ManifestAction) model.manifestForm
+    Routing.ManifestEditRoute _ ->
+      manifestEdit (Signal.forwardTo address ManifestAction) (Debug.log "model" model.manifestForm)
 
 
 view address model =

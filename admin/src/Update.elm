@@ -32,13 +32,13 @@ update action model =
 
     ManifestAction subAction ->
       let
-        updatedModel =
-          { manifests = model.manifests }
-
-        ( manifestsX, fx ) =
-          Manifests.Update.update subAction updatedModel
+        --   updatedModel =
+        --     { manifests = model.manifests }
+        --
+        ( updatedModel, fx ) =
+          Manifests.Update.update subAction model
       in
-        ( { model | manifests = manifestsX.manifests }, Effects.map ManifestAction fx )
+        ( updatedModel, Effects.map ManifestAction fx )
 
 
 reportError : Http.Error -> Http.Error

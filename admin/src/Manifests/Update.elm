@@ -45,27 +45,29 @@ update action model =
         manifest =
           filterByID id model.manifests
       in
-        ( { model | manifestForm = manifest }, (Effects.map HopAction (navigateTo path)) )
+        ( { model | manifestForm = (Debug.log "manifestX" (filterByID id model.manifests)) }, Effects.map HopAction (navigateTo path) )
 
     DiscardSave ->
       ( model, Effects.map HopAction (navigateTo "/manifests") )
 
     UpdateDisplayName contents ->
       let
-        defaultManifest : Manifest
-        defaultManifest =
-          { name = "foo"
-          , catalogs = Nothing
-          , displayName = Nothing
-          }
+        manifest =
+          model.manifestForm
+
+        updateField contents manifest =
+          { manifest | displayName = Just contents }
+
+        updatedManifestForm =
+          Maybe.map (updateField contents) manifest
       in
-        ( { model | manifestForm = Just defaultManifest }, Effects.none )
+        ( { model | manifestForm = updatedManifestForm }, Effects.none )
 
     Save manifest ->
       let
         updateManifest existing =
           if existing.name == manifest.name then
-            { existing | displayName = manifest.displayName }
+            manifest
           else
             existing
 
@@ -76,6 +78,9 @@ update action model =
 
     HopAction _ ->
       ( model, Effects.none )
+
+    NoOp ->
+      ( (Debug.log "model" model), Effects.none )
 
 
 getManifests =

@@ -13807,6 +13807,7 @@ Elm.Manifests.Actions.make = function (_elm) {
    $Result = Elm.Result.make(_elm),
    $Signal = Elm.Signal.make(_elm);
    var _op = {};
+   var NoOp = {ctor: "NoOp"};
    var HopAction = function (a) {
       return {ctor: "HopAction",_0: a};
    };
@@ -13829,7 +13830,8 @@ Elm.Manifests.Actions.make = function (_elm) {
                                           ,UpdateDisplayName: UpdateDisplayName
                                           ,Save: Save
                                           ,SortBy: SortBy
-                                          ,HopAction: HopAction};
+                                          ,HopAction: HopAction
+                                          ,NoOp: NoOp};
 };
 Elm.Manifests = Elm.Manifests || {};
 Elm.Manifests.Update = Elm.Manifests.Update || {};
@@ -13904,9 +13906,6 @@ Elm.Manifests.Update.make = function (_elm) {
                                {manifests: $List.reverse(model.manifests)})
                                ,_1: $Effects.none};
          case "EditManifest": var _p4 = _p1._0;
-           var defaultManifest = {name: "foo"
-                                 ,catalogs: $Maybe.Nothing
-                                 ,displayName: $Maybe.Nothing};
            var filterByID = F2(function (id,manifests) {
               return $List.head(A2($List.filter,
               function (manifest) {
@@ -13920,7 +13919,9 @@ Elm.Manifests.Update.make = function (_elm) {
            A2($Basics._op["++"],_p4,"/edit"));
            return {ctor: "_Tuple2"
                   ,_0: _U.update(model,
-                  {manifestForm: $Maybe.Just(defaultManifest)})
+                  {manifestForm: A2($Debug.log,
+                  "manifestX",
+                  A2(filterByID,_p4,model.manifests))})
                   ,_1: A2($Effects.map,
                   $Manifests$Actions.HopAction,
                   $Hop$Navigate.navigateTo(path))};
@@ -13929,17 +13930,21 @@ Elm.Manifests.Update.make = function (_elm) {
                                     ,_1: A2($Effects.map,
                                     $Manifests$Actions.HopAction,
                                     $Hop$Navigate.navigateTo("/manifests"))};
-         case "UpdateDisplayName": var defaultManifest = {name: "foo"
-                                                         ,catalogs: $Maybe.Nothing
-                                                         ,displayName: $Maybe.Nothing};
+         case "UpdateDisplayName":
+         var updateField = F2(function (contents,manifest) {
+              return _U.update(manifest,
+              {displayName: $Maybe.Just(contents)});
+           });
+           var manifest = model.manifestForm;
+           var updatedManifestForm = A2($Maybe.map,
+           updateField(_p1._0),
+           manifest);
            return {ctor: "_Tuple2"
-                  ,_0: _U.update(model,
-                  {manifestForm: $Maybe.Just(defaultManifest)})
+                  ,_0: _U.update(model,{manifestForm: updatedManifestForm})
                   ,_1: $Effects.none};
          case "Save": var _p5 = _p1._0;
            var updateManifest = function (existing) {
-              return _U.eq(existing.name,_p5.name) ? _U.update(existing,
-              {displayName: _p5.displayName}) : existing;
+              return _U.eq(existing.name,_p5.name) ? _p5 : existing;
            };
            var updatedCollection = A2($List.map,
            updateManifest,
@@ -13949,7 +13954,12 @@ Elm.Manifests.Update.make = function (_elm) {
                   ,_1: A2($Effects.map,
                   $Manifests$Actions.HopAction,
                   $Hop$Navigate.navigateTo("/manifests"))};
-         default: return {ctor: "_Tuple2",_0: model,_1: $Effects.none};}
+         case "HopAction": return {ctor: "_Tuple2"
+                                  ,_0: model
+                                  ,_1: $Effects.none};
+         default: return {ctor: "_Tuple2"
+                         ,_0: A2($Debug.log,"model",model)
+                         ,_1: $Effects.none};}
    });
    return _elm.Manifests.Update.values = {_op: _op
                                          ,update: update
@@ -14039,12 +14049,11 @@ Elm.Update.make = function (_elm) {
          case "NoOp": return {ctor: "_Tuple2"
                              ,_0: model
                              ,_1: $Effects.none};
-         default: var updatedModel = {manifests: model.manifests};
-           var _p3 = A2($Manifests$Update.update,_p1._0,updatedModel);
-           var manifestsX = _p3._0;
+         default: var _p3 = A2($Manifests$Update.update,_p1._0,model);
+           var updatedModel = _p3._0;
            var fx = _p3._1;
            return {ctor: "_Tuple2"
-                  ,_0: _U.update(model,{manifests: manifestsX.manifests})
+                  ,_0: updatedModel
                   ,_1: A2($Effects.map,ManifestAction,fx)};}
    });
    var NoOp = {ctor: "NoOp"};
@@ -14107,10 +14116,12 @@ Elm.Manifests.View.make = function (_elm) {
    $Signal = Elm.Signal.make(_elm);
    var _op = {};
    var manifestEdit = F2(function (address,manifest) {
-      var _p0 = manifest;
+      var _p0 = A2($Debug.log,"manifest",manifest);
       if (_p0.ctor === "Nothing") {
             return A2($Html.div,
-            _U.list([]),
+            _U.list([A2($Html$Events.onClick,
+            address,
+            $Manifests$Actions.NoOp)]),
             _U.list([$Html.text("not found")]));
          } else {
             var _p1 = _p0._0;
@@ -14280,7 +14291,7 @@ Elm.View.make = function (_elm) {
            _U.list([$Html.text("Not found")]))]));
          default: return A2($Manifests$View.manifestEdit,
            A2($Signal.forwardTo,address,$Update.ManifestAction),
-           model.manifestForm);}
+           A2($Debug.log,"model",model.manifestForm));}
    });
    var view = F2(function (address,model) {
       return A2(pageView,address,model);
