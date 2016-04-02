@@ -32,26 +32,10 @@ update action model =
 
     ManifestAction subAction ->
       let
-        --   updatedModel =
-        --     { manifests = model.manifests }
-        --
+        log =
+          Debug.log "sub" subAction
+
         ( updatedModel, fx ) =
           Manifests.Update.update subAction model
       in
         ( updatedModel, Effects.map ManifestAction fx )
-
-
-reportError : Http.Error -> Http.Error
-reportError error =
-  case error of
-    Http.Timeout ->
-      Debug.log "API timeout" error
-
-    Http.NetworkError ->
-      Debug.log "Network error contacting API" error
-
-    Http.UnexpectedPayload payload ->
-      Debug.log ("Unexpected payload from API: " ++ payload) error
-
-    Http.BadResponse status payload ->
-      Debug.log ("Unexpected status/payload from API: " ++ (toString status) ++ "/" ++ payload) error

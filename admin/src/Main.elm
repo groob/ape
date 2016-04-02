@@ -6,18 +6,18 @@ import Signal exposing (Address)
 import StartApp
 import Routing
 import Manifests.Update
-import Manifests.Models
 import Manifests.Models exposing (Manifest)
 import Models exposing (..)
 import View exposing (..)
 import Update exposing (..)
+import Client.Http exposing (getManifests)
 
 
 init : ( Model, Effects Action )
 init =
   let
     fxs =
-      [ Effects.map ManifestAction Manifests.Update.getManifests ]
+      [ Effects.map ManifestAction Client.Http.getManifests ]
 
     fx =
       Effects.batch fxs

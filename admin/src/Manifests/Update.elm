@@ -7,10 +7,10 @@ import Http
 import Hop
 import Hop.Navigate exposing (navigateTo)
 import Task exposing (Task, andThen)
-import Json.Decode exposing ((:=))
 import Html exposing (Attribute)
 import Html.Events exposing (on, targetValue)
 import Signal exposing (Address)
+import Client.Http exposing (reportError, getManifests)
 
 
 update action model =
@@ -30,8 +30,18 @@ update action model =
     SortBy filter ->
       ( { model | manifests = (List.reverse model.manifests) }, Effects.none )
 
+    GetManifest manifest ->
+      ( { model
+          | manifestForm = manifest
+        }
+      , Effects.none
+      )
+
     EditManifest id ->
       let
+        log =
+          Debug.log "editing" id
+
         path =
           "/manifests/" ++ id ++ "/edit"
 
@@ -45,10 +55,14 @@ update action model =
         manifest =
           filterByID id model.manifests
       in
-        ( { model | manifestForm = (Debug.log "manifestX" (filterByID id model.manifests)) }, Effects.map HopAction (navigateTo path) )
+        ( { model
+            | manifestForm = (Debug.log "manifestX" (filterByID id model.manifests))
+          }
+        , Effects.map HopAction (navigateTo path)
+        )
 
     DiscardSave ->
-      ( model, Effects.map HopAction (navigateTo "/manifests") )
+      ( { model | manifestForm = Nothing }, Effects.map HopAction (navigateTo "/manifests") )
 
     UpdateDisplayName contents ->
       let
@@ -82,30 +96,14 @@ update action model =
     NoOp ->
       ( (Debug.log "model" model), Effects.none )
 
-
-getManifests =
-  Http.get (Json.Decode.list manifest) "/api/manifests"
-    |> Task.toResult
-    |> Task.map GetManifests
-    |> Effects.task
+    DeleteManifest name ->
+      let
+        updatedManifests =
+          List.filter (\manifest -> manifest.name /= name) model.manifests
+      in
+        ( { model | manifests = updatedManifests }, Effects.none )
 
 
 onInput : Address a -> (String -> a) -> Attribute
 onInput address f =
   on "input" targetValue (\v -> Signal.message address (f v))
-
-
-reportError : Http.Error -> Http.Error
-reportError error =
-  case error of
-    Http.Timeout ->
-      Debug.log "API timeout" error
-
-    Http.NetworkError ->
-      Debug.log "Network error contacting API" error
-
-    Http.UnexpectedPayload payload ->
-      Debug.log ("Unexpected payload from API: " ++ payload) error
-
-    Http.BadResponse status payload ->
-      Debug.log ("Unexpected status/payload from API: " ++ (toString status) ++ "/" ++ payload) error

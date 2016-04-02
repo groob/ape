@@ -7443,149 +7443,502 @@ Elm.Combine.Num.make = function (_elm) {
                                     ,$int: $int
                                     ,$float: $float};
 };
-Elm.Native = Elm.Native || {};
-Elm.Native.History = {};
-Elm.Native.History.make = function(localRuntime){
+Elm.Native.Json = {};
 
-  localRuntime.Native = localRuntime.Native || {};
-  localRuntime.Native.History = localRuntime.Native.History || {};
+Elm.Native.Json.make = function(localRuntime) {
+	localRuntime.Native = localRuntime.Native || {};
+	localRuntime.Native.Json = localRuntime.Native.Json || {};
+	if (localRuntime.Native.Json.values) {
+		return localRuntime.Native.Json.values;
+	}
 
-  if (localRuntime.Native.History.values){
-    return localRuntime.Native.History.values;
-  }
-
-  var NS = Elm.Native.Signal.make(localRuntime);
-  var Task = Elm.Native.Task.make(localRuntime);
-  var Utils = Elm.Native.Utils.make(localRuntime);
-  var node = window;
-
-  // path : Signal String
-  var path = NS.input('History.path', window.location.pathname);
-
-  // length : Signal Int
-  var length = NS.input('History.length', window.history.length);
-
-  // hash : Signal String
-  var hash = NS.input('History.hash', window.location.hash);
-
-  localRuntime.addListener([path.id, length.id], node, 'popstate', function getPath(event){
-    localRuntime.notify(path.id, window.location.pathname);
-    localRuntime.notify(length.id, window.history.length);
-    localRuntime.notify(hash.id, window.location.hash);
-  });
-
-  localRuntime.addListener([hash.id], node, 'hashchange', function getHash(event){
-    localRuntime.notify(hash.id, window.location.hash);
-  });
-
-  // setPath : String -> Task error ()
-  var setPath = function(urlpath){
-    return Task.asyncFunction(function(callback){
-      setTimeout(function(){
-        localRuntime.notify(path.id, urlpath);
-        window.history.pushState({}, "", urlpath);
-        localRuntime.notify(hash.id, window.location.hash);
-        localRuntime.notify(length.id, window.history.length);
-
-      },0);
-      return callback(Task.succeed(Utils.Tuple0));
-    });
-  };
-
-  // replacePath : String -> Task error ()
-  var replacePath = function(urlpath){
-    return Task.asyncFunction(function(callback){
-      setTimeout(function(){
-        localRuntime.notify(path.id, urlpath);
-        window.history.replaceState({}, "", urlpath);
-        localRuntime.notify(hash.id, window.location.hash);
-        localRuntime.notify(length.id, window.history.length);
-      },0);
-      return callback(Task.succeed(Utils.Tuple0));
-    });
-  };
-
-  // go : Int -> Task error ()
-  var go = function(n){
-    return Task.asyncFunction(function(callback){
-      setTimeout(function(){
-        window.history.go(n);
-        localRuntime.notify(length.id, window.history.length);
-        localRuntime.notify(hash.id, window.location.hash);
-      }, 0);
-      return callback(Task.succeed(Utils.Tuple0));
-    });
-  };
-
-  // back : Task error ()
-  var back = Task.asyncFunction(function(callback){
-    setTimeout(function(){
-      localRuntime.notify(hash.id, window.location.hash);
-      window.history.back();
-      localRuntime.notify(length.id, window.history.length);
-
-    }, 0);
-    return callback(Task.succeed(Utils.Tuple0));
-  });
-
-  // forward : Task error ()
-  var forward = Task.asyncFunction(function(callback){
-    setTimeout(function(){
-      window.history.forward();
-      localRuntime.notify(length.id, window.history.length);
-      localRuntime.notify(hash.id, window.location.hash);
-    }, 0);
-    return callback(Task.succeed(Utils.Tuple0));
-  });
+	var ElmArray = Elm.Native.Array.make(localRuntime);
+	var List = Elm.Native.List.make(localRuntime);
+	var Maybe = Elm.Maybe.make(localRuntime);
+	var Result = Elm.Result.make(localRuntime);
+	var Utils = Elm.Native.Utils.make(localRuntime);
 
 
+	function crash(expected, actual) {
+		throw new Error(
+			'expecting ' + expected + ' but got ' + JSON.stringify(actual)
+		);
+	}
 
-  return {
-    path        : path,
-    setPath     : setPath,
-    replacePath : replacePath,
-    go          : go,
-    back        : back,
-    forward     : forward,
-    length      : length,
-    hash        : hash
-  };
 
+	// PRIMITIVE VALUES
+
+	function decodeNull(successValue) {
+		return function(value) {
+			if (value === null) {
+				return successValue;
+			}
+			crash('null', value);
+		};
+	}
+
+
+	function decodeString(value) {
+		if (typeof value === 'string' || value instanceof String) {
+			return value;
+		}
+		crash('a String', value);
+	}
+
+
+	function decodeFloat(value) {
+		if (typeof value === 'number') {
+			return value;
+		}
+		crash('a Float', value);
+	}
+
+
+	function decodeInt(value) {
+		if (typeof value !== 'number') {
+			crash('an Int', value);
+		}
+
+		if (value < 2147483647 && value > -2147483647 && (value | 0) === value) {
+			return value;
+		}
+
+		if (isFinite(value) && !(value % 1)) {
+			return value;
+		}
+
+		crash('an Int', value);
+	}
+
+
+	function decodeBool(value) {
+		if (typeof value === 'boolean') {
+			return value;
+		}
+		crash('a Bool', value);
+	}
+
+
+	// ARRAY
+
+	function decodeArray(decoder) {
+		return function(value) {
+			if (value instanceof Array) {
+				var len = value.length;
+				var array = new Array(len);
+				for (var i = len; i--; ) {
+					array[i] = decoder(value[i]);
+				}
+				return ElmArray.fromJSArray(array);
+			}
+			crash('an Array', value);
+		};
+	}
+
+
+	// LIST
+
+	function decodeList(decoder) {
+		return function(value) {
+			if (value instanceof Array) {
+				var len = value.length;
+				var list = List.Nil;
+				for (var i = len; i--; ) {
+					list = List.Cons( decoder(value[i]), list );
+				}
+				return list;
+			}
+			crash('a List', value);
+		};
+	}
+
+
+	// MAYBE
+
+	function decodeMaybe(decoder) {
+		return function(value) {
+			try {
+				return Maybe.Just(decoder(value));
+			} catch(e) {
+				return Maybe.Nothing;
+			}
+		};
+	}
+
+
+	// FIELDS
+
+	function decodeField(field, decoder) {
+		return function(value) {
+			var subValue = value[field];
+			if (subValue !== undefined) {
+				return decoder(subValue);
+			}
+			crash("an object with field '" + field + "'", value);
+		};
+	}
+
+
+	// OBJECTS
+
+	function decodeKeyValuePairs(decoder) {
+		return function(value) {
+			var isObject =
+				typeof value === 'object'
+					&& value !== null
+					&& !(value instanceof Array);
+
+			if (isObject) {
+				var keyValuePairs = List.Nil;
+				for (var key in value)
+				{
+					var elmValue = decoder(value[key]);
+					var pair = Utils.Tuple2(key, elmValue);
+					keyValuePairs = List.Cons(pair, keyValuePairs);
+				}
+				return keyValuePairs;
+			}
+
+			crash('an object', value);
+		};
+	}
+
+	function decodeObject1(f, d1) {
+		return function(value) {
+			return f(d1(value));
+		};
+	}
+
+	function decodeObject2(f, d1, d2) {
+		return function(value) {
+			return A2( f, d1(value), d2(value) );
+		};
+	}
+
+	function decodeObject3(f, d1, d2, d3) {
+		return function(value) {
+			return A3( f, d1(value), d2(value), d3(value) );
+		};
+	}
+
+	function decodeObject4(f, d1, d2, d3, d4) {
+		return function(value) {
+			return A4( f, d1(value), d2(value), d3(value), d4(value) );
+		};
+	}
+
+	function decodeObject5(f, d1, d2, d3, d4, d5) {
+		return function(value) {
+			return A5( f, d1(value), d2(value), d3(value), d4(value), d5(value) );
+		};
+	}
+
+	function decodeObject6(f, d1, d2, d3, d4, d5, d6) {
+		return function(value) {
+			return A6( f,
+				d1(value),
+				d2(value),
+				d3(value),
+				d4(value),
+				d5(value),
+				d6(value)
+			);
+		};
+	}
+
+	function decodeObject7(f, d1, d2, d3, d4, d5, d6, d7) {
+		return function(value) {
+			return A7( f,
+				d1(value),
+				d2(value),
+				d3(value),
+				d4(value),
+				d5(value),
+				d6(value),
+				d7(value)
+			);
+		};
+	}
+
+	function decodeObject8(f, d1, d2, d3, d4, d5, d6, d7, d8) {
+		return function(value) {
+			return A8( f,
+				d1(value),
+				d2(value),
+				d3(value),
+				d4(value),
+				d5(value),
+				d6(value),
+				d7(value),
+				d8(value)
+			);
+		};
+	}
+
+
+	// TUPLES
+
+	function decodeTuple1(f, d1) {
+		return function(value) {
+			if ( !(value instanceof Array) || value.length !== 1 ) {
+				crash('a Tuple of length 1', value);
+			}
+			return f( d1(value[0]) );
+		};
+	}
+
+	function decodeTuple2(f, d1, d2) {
+		return function(value) {
+			if ( !(value instanceof Array) || value.length !== 2 ) {
+				crash('a Tuple of length 2', value);
+			}
+			return A2( f, d1(value[0]), d2(value[1]) );
+		};
+	}
+
+	function decodeTuple3(f, d1, d2, d3) {
+		return function(value) {
+			if ( !(value instanceof Array) || value.length !== 3 ) {
+				crash('a Tuple of length 3', value);
+			}
+			return A3( f, d1(value[0]), d2(value[1]), d3(value[2]) );
+		};
+	}
+
+
+	function decodeTuple4(f, d1, d2, d3, d4) {
+		return function(value) {
+			if ( !(value instanceof Array) || value.length !== 4 ) {
+				crash('a Tuple of length 4', value);
+			}
+			return A4( f, d1(value[0]), d2(value[1]), d3(value[2]), d4(value[3]) );
+		};
+	}
+
+
+	function decodeTuple5(f, d1, d2, d3, d4, d5) {
+		return function(value) {
+			if ( !(value instanceof Array) || value.length !== 5 ) {
+				crash('a Tuple of length 5', value);
+			}
+			return A5( f,
+				d1(value[0]),
+				d2(value[1]),
+				d3(value[2]),
+				d4(value[3]),
+				d5(value[4])
+			);
+		};
+	}
+
+
+	function decodeTuple6(f, d1, d2, d3, d4, d5, d6) {
+		return function(value) {
+			if ( !(value instanceof Array) || value.length !== 6 ) {
+				crash('a Tuple of length 6', value);
+			}
+			return A6( f,
+				d1(value[0]),
+				d2(value[1]),
+				d3(value[2]),
+				d4(value[3]),
+				d5(value[4]),
+				d6(value[5])
+			);
+		};
+	}
+
+	function decodeTuple7(f, d1, d2, d3, d4, d5, d6, d7) {
+		return function(value) {
+			if ( !(value instanceof Array) || value.length !== 7 ) {
+				crash('a Tuple of length 7', value);
+			}
+			return A7( f,
+				d1(value[0]),
+				d2(value[1]),
+				d3(value[2]),
+				d4(value[3]),
+				d5(value[4]),
+				d6(value[5]),
+				d7(value[6])
+			);
+		};
+	}
+
+
+	function decodeTuple8(f, d1, d2, d3, d4, d5, d6, d7, d8) {
+		return function(value) {
+			if ( !(value instanceof Array) || value.length !== 8 ) {
+				crash('a Tuple of length 8', value);
+			}
+			return A8( f,
+				d1(value[0]),
+				d2(value[1]),
+				d3(value[2]),
+				d4(value[3]),
+				d5(value[4]),
+				d6(value[5]),
+				d7(value[6]),
+				d8(value[7])
+			);
+		};
+	}
+
+
+	// CUSTOM DECODERS
+
+	function decodeValue(value) {
+		return value;
+	}
+
+	function runDecoderValue(decoder, value) {
+		try {
+			return Result.Ok(decoder(value));
+		} catch(e) {
+			return Result.Err(e.message);
+		}
+	}
+
+	function customDecoder(decoder, callback) {
+		return function(value) {
+			var result = callback(decoder(value));
+			if (result.ctor === 'Err') {
+				throw new Error('custom decoder failed: ' + result._0);
+			}
+			return result._0;
+		};
+	}
+
+	function andThen(decode, callback) {
+		return function(value) {
+			var result = decode(value);
+			return callback(result)(value);
+		};
+	}
+
+	function fail(msg) {
+		return function(value) {
+			throw new Error(msg);
+		};
+	}
+
+	function succeed(successValue) {
+		return function(value) {
+			return successValue;
+		};
+	}
+
+
+	// ONE OF MANY
+
+	function oneOf(decoders) {
+		return function(value) {
+			var errors = [];
+			var temp = decoders;
+			while (temp.ctor !== '[]') {
+				try {
+					return temp._0(value);
+				} catch(e) {
+					errors.push(e.message);
+				}
+				temp = temp._1;
+			}
+			throw new Error('expecting one of the following:\n    ' + errors.join('\n    '));
+		};
+	}
+
+	function get(decoder, value) {
+		try {
+			return Result.Ok(decoder(value));
+		} catch(e) {
+			return Result.Err(e.message);
+		}
+	}
+
+
+	// ENCODE / DECODE
+
+	function runDecoderString(decoder, string) {
+		try {
+			return Result.Ok(decoder(JSON.parse(string)));
+		} catch(e) {
+			return Result.Err(e.message);
+		}
+	}
+
+	function encode(indentLevel, value) {
+		return JSON.stringify(value, null, indentLevel);
+	}
+
+	function identity(value) {
+		return value;
+	}
+
+	function encodeObject(keyValuePairs) {
+		var obj = {};
+		while (keyValuePairs.ctor !== '[]') {
+			var pair = keyValuePairs._0;
+			obj[pair._0] = pair._1;
+			keyValuePairs = keyValuePairs._1;
+		}
+		return obj;
+	}
+
+	return localRuntime.Native.Json.values = {
+		encode: F2(encode),
+		runDecoderString: F2(runDecoderString),
+		runDecoderValue: F2(runDecoderValue),
+
+		get: F2(get),
+		oneOf: oneOf,
+
+		decodeNull: decodeNull,
+		decodeInt: decodeInt,
+		decodeFloat: decodeFloat,
+		decodeString: decodeString,
+		decodeBool: decodeBool,
+
+		decodeMaybe: decodeMaybe,
+
+		decodeList: decodeList,
+		decodeArray: decodeArray,
+
+		decodeField: F2(decodeField),
+
+		decodeObject1: F2(decodeObject1),
+		decodeObject2: F3(decodeObject2),
+		decodeObject3: F4(decodeObject3),
+		decodeObject4: F5(decodeObject4),
+		decodeObject5: F6(decodeObject5),
+		decodeObject6: F7(decodeObject6),
+		decodeObject7: F8(decodeObject7),
+		decodeObject8: F9(decodeObject8),
+		decodeKeyValuePairs: decodeKeyValuePairs,
+
+		decodeTuple1: F2(decodeTuple1),
+		decodeTuple2: F3(decodeTuple2),
+		decodeTuple3: F4(decodeTuple3),
+		decodeTuple4: F5(decodeTuple4),
+		decodeTuple5: F6(decodeTuple5),
+		decodeTuple6: F7(decodeTuple6),
+		decodeTuple7: F8(decodeTuple7),
+		decodeTuple8: F9(decodeTuple8),
+
+		andThen: F2(andThen),
+		decodeValue: decodeValue,
+		customDecoder: F2(customDecoder),
+		fail: fail,
+		succeed: succeed,
+
+		identity: identity,
+		encodeNull: null,
+		encodeArray: ElmArray.toJSArray,
+		encodeList: List.toArray,
+		encodeObject: encodeObject
+
+	};
 };
 
-Elm.History = Elm.History || {};
-Elm.History.make = function (_elm) {
-   "use strict";
-   _elm.History = _elm.History || {};
-   if (_elm.History.values) return _elm.History.values;
-   var _U = Elm.Native.Utils.make(_elm),
-   $Basics = Elm.Basics.make(_elm),
-   $Debug = Elm.Debug.make(_elm),
-   $List = Elm.List.make(_elm),
-   $Maybe = Elm.Maybe.make(_elm),
-   $Native$History = Elm.Native.History.make(_elm),
-   $Result = Elm.Result.make(_elm),
-   $Signal = Elm.Signal.make(_elm),
-   $Task = Elm.Task.make(_elm);
-   var _op = {};
-   var path = $Native$History.path;
-   var hash = $Native$History.hash;
-   var length = $Native$History.length;
-   var forward = $Native$History.forward;
-   var back = $Native$History.back;
-   var go = $Native$History.go;
-   var replacePath = $Native$History.replacePath;
-   var setPath = $Native$History.setPath;
-   return _elm.History.values = {_op: _op
-                                ,setPath: setPath
-                                ,replacePath: replacePath
-                                ,go: go
-                                ,back: back
-                                ,forward: forward
-                                ,length: length
-                                ,hash: hash
-                                ,path: path};
-};
 Elm.Native.Array = {};
 Elm.Native.Array.make = function(localRuntime) {
 
@@ -8638,171 +8991,6 @@ Elm.Array.make = function (_elm) {
                               ,foldl: foldl
                               ,foldr: foldr};
 };
-Elm.Native.Time = {};
-
-Elm.Native.Time.make = function(localRuntime)
-{
-	localRuntime.Native = localRuntime.Native || {};
-	localRuntime.Native.Time = localRuntime.Native.Time || {};
-	if (localRuntime.Native.Time.values)
-	{
-		return localRuntime.Native.Time.values;
-	}
-
-	var NS = Elm.Native.Signal.make(localRuntime);
-	var Maybe = Elm.Maybe.make(localRuntime);
-
-
-	// FRAMES PER SECOND
-
-	function fpsWhen(desiredFPS, isOn)
-	{
-		var msPerFrame = 1000 / desiredFPS;
-		var ticker = NS.input('fps-' + desiredFPS, null);
-
-		function notifyTicker()
-		{
-			localRuntime.notify(ticker.id, null);
-		}
-
-		function firstArg(x, y)
-		{
-			return x;
-		}
-
-		// input fires either when isOn changes, or when ticker fires.
-		// Its value is a tuple with the current timestamp, and the state of isOn
-		var input = NS.timestamp(A3(NS.map2, F2(firstArg), NS.dropRepeats(isOn), ticker));
-
-		var initialState = {
-			isOn: false,
-			time: localRuntime.timer.programStart,
-			delta: 0
-		};
-
-		var timeoutId;
-
-		function update(input, state)
-		{
-			var currentTime = input._0;
-			var isOn = input._1;
-			var wasOn = state.isOn;
-			var previousTime = state.time;
-
-			if (isOn)
-			{
-				timeoutId = localRuntime.setTimeout(notifyTicker, msPerFrame);
-			}
-			else if (wasOn)
-			{
-				clearTimeout(timeoutId);
-			}
-
-			return {
-				isOn: isOn,
-				time: currentTime,
-				delta: (isOn && !wasOn) ? 0 : currentTime - previousTime
-			};
-		}
-
-		return A2(
-			NS.map,
-			function(state) { return state.delta; },
-			A3(NS.foldp, F2(update), update(input.value, initialState), input)
-		);
-	}
-
-
-	// EVERY
-
-	function every(t)
-	{
-		var ticker = NS.input('every-' + t, null);
-		function tellTime()
-		{
-			localRuntime.notify(ticker.id, null);
-		}
-		var clock = A2(NS.map, fst, NS.timestamp(ticker));
-		setInterval(tellTime, t);
-		return clock;
-	}
-
-
-	function fst(pair)
-	{
-		return pair._0;
-	}
-
-
-	function read(s)
-	{
-		var t = Date.parse(s);
-		return isNaN(t) ? Maybe.Nothing : Maybe.Just(t);
-	}
-
-	return localRuntime.Native.Time.values = {
-		fpsWhen: F2(fpsWhen),
-		every: every,
-		toDate: function(t) { return new Date(t); },
-		read: read
-	};
-};
-
-Elm.Time = Elm.Time || {};
-Elm.Time.make = function (_elm) {
-   "use strict";
-   _elm.Time = _elm.Time || {};
-   if (_elm.Time.values) return _elm.Time.values;
-   var _U = Elm.Native.Utils.make(_elm),
-   $Basics = Elm.Basics.make(_elm),
-   $Native$Signal = Elm.Native.Signal.make(_elm),
-   $Native$Time = Elm.Native.Time.make(_elm),
-   $Signal = Elm.Signal.make(_elm);
-   var _op = {};
-   var delay = $Native$Signal.delay;
-   var since = F2(function (time,signal) {
-      var stop = A2($Signal.map,
-      $Basics.always(-1),
-      A2(delay,time,signal));
-      var start = A2($Signal.map,$Basics.always(1),signal);
-      var delaydiff = A3($Signal.foldp,
-      F2(function (x,y) {    return x + y;}),
-      0,
-      A2($Signal.merge,start,stop));
-      return A2($Signal.map,
-      F2(function (x,y) {    return !_U.eq(x,y);})(0),
-      delaydiff);
-   });
-   var timestamp = $Native$Signal.timestamp;
-   var every = $Native$Time.every;
-   var fpsWhen = $Native$Time.fpsWhen;
-   var fps = function (targetFrames) {
-      return A2(fpsWhen,targetFrames,$Signal.constant(true));
-   };
-   var inMilliseconds = function (t) {    return t;};
-   var millisecond = 1;
-   var second = 1000 * millisecond;
-   var minute = 60 * second;
-   var hour = 60 * minute;
-   var inHours = function (t) {    return t / hour;};
-   var inMinutes = function (t) {    return t / minute;};
-   var inSeconds = function (t) {    return t / second;};
-   return _elm.Time.values = {_op: _op
-                             ,millisecond: millisecond
-                             ,second: second
-                             ,minute: minute
-                             ,hour: hour
-                             ,inMilliseconds: inMilliseconds
-                             ,inSeconds: inSeconds
-                             ,inMinutes: inMinutes
-                             ,inHours: inHours
-                             ,fps: fps
-                             ,fpsWhen: fpsWhen
-                             ,every: every
-                             ,timestamp: timestamp
-                             ,delay: delay
-                             ,since: since};
-};
 Elm.Dict = Elm.Dict || {};
 Elm.Dict.make = function (_elm) {
    "use strict";
@@ -9563,502 +9751,6 @@ Elm.Dict.make = function (_elm) {
                              ,toList: toList
                              ,fromList: fromList};
 };
-Elm.Native.Json = {};
-
-Elm.Native.Json.make = function(localRuntime) {
-	localRuntime.Native = localRuntime.Native || {};
-	localRuntime.Native.Json = localRuntime.Native.Json || {};
-	if (localRuntime.Native.Json.values) {
-		return localRuntime.Native.Json.values;
-	}
-
-	var ElmArray = Elm.Native.Array.make(localRuntime);
-	var List = Elm.Native.List.make(localRuntime);
-	var Maybe = Elm.Maybe.make(localRuntime);
-	var Result = Elm.Result.make(localRuntime);
-	var Utils = Elm.Native.Utils.make(localRuntime);
-
-
-	function crash(expected, actual) {
-		throw new Error(
-			'expecting ' + expected + ' but got ' + JSON.stringify(actual)
-		);
-	}
-
-
-	// PRIMITIVE VALUES
-
-	function decodeNull(successValue) {
-		return function(value) {
-			if (value === null) {
-				return successValue;
-			}
-			crash('null', value);
-		};
-	}
-
-
-	function decodeString(value) {
-		if (typeof value === 'string' || value instanceof String) {
-			return value;
-		}
-		crash('a String', value);
-	}
-
-
-	function decodeFloat(value) {
-		if (typeof value === 'number') {
-			return value;
-		}
-		crash('a Float', value);
-	}
-
-
-	function decodeInt(value) {
-		if (typeof value !== 'number') {
-			crash('an Int', value);
-		}
-
-		if (value < 2147483647 && value > -2147483647 && (value | 0) === value) {
-			return value;
-		}
-
-		if (isFinite(value) && !(value % 1)) {
-			return value;
-		}
-
-		crash('an Int', value);
-	}
-
-
-	function decodeBool(value) {
-		if (typeof value === 'boolean') {
-			return value;
-		}
-		crash('a Bool', value);
-	}
-
-
-	// ARRAY
-
-	function decodeArray(decoder) {
-		return function(value) {
-			if (value instanceof Array) {
-				var len = value.length;
-				var array = new Array(len);
-				for (var i = len; i--; ) {
-					array[i] = decoder(value[i]);
-				}
-				return ElmArray.fromJSArray(array);
-			}
-			crash('an Array', value);
-		};
-	}
-
-
-	// LIST
-
-	function decodeList(decoder) {
-		return function(value) {
-			if (value instanceof Array) {
-				var len = value.length;
-				var list = List.Nil;
-				for (var i = len; i--; ) {
-					list = List.Cons( decoder(value[i]), list );
-				}
-				return list;
-			}
-			crash('a List', value);
-		};
-	}
-
-
-	// MAYBE
-
-	function decodeMaybe(decoder) {
-		return function(value) {
-			try {
-				return Maybe.Just(decoder(value));
-			} catch(e) {
-				return Maybe.Nothing;
-			}
-		};
-	}
-
-
-	// FIELDS
-
-	function decodeField(field, decoder) {
-		return function(value) {
-			var subValue = value[field];
-			if (subValue !== undefined) {
-				return decoder(subValue);
-			}
-			crash("an object with field '" + field + "'", value);
-		};
-	}
-
-
-	// OBJECTS
-
-	function decodeKeyValuePairs(decoder) {
-		return function(value) {
-			var isObject =
-				typeof value === 'object'
-					&& value !== null
-					&& !(value instanceof Array);
-
-			if (isObject) {
-				var keyValuePairs = List.Nil;
-				for (var key in value)
-				{
-					var elmValue = decoder(value[key]);
-					var pair = Utils.Tuple2(key, elmValue);
-					keyValuePairs = List.Cons(pair, keyValuePairs);
-				}
-				return keyValuePairs;
-			}
-
-			crash('an object', value);
-		};
-	}
-
-	function decodeObject1(f, d1) {
-		return function(value) {
-			return f(d1(value));
-		};
-	}
-
-	function decodeObject2(f, d1, d2) {
-		return function(value) {
-			return A2( f, d1(value), d2(value) );
-		};
-	}
-
-	function decodeObject3(f, d1, d2, d3) {
-		return function(value) {
-			return A3( f, d1(value), d2(value), d3(value) );
-		};
-	}
-
-	function decodeObject4(f, d1, d2, d3, d4) {
-		return function(value) {
-			return A4( f, d1(value), d2(value), d3(value), d4(value) );
-		};
-	}
-
-	function decodeObject5(f, d1, d2, d3, d4, d5) {
-		return function(value) {
-			return A5( f, d1(value), d2(value), d3(value), d4(value), d5(value) );
-		};
-	}
-
-	function decodeObject6(f, d1, d2, d3, d4, d5, d6) {
-		return function(value) {
-			return A6( f,
-				d1(value),
-				d2(value),
-				d3(value),
-				d4(value),
-				d5(value),
-				d6(value)
-			);
-		};
-	}
-
-	function decodeObject7(f, d1, d2, d3, d4, d5, d6, d7) {
-		return function(value) {
-			return A7( f,
-				d1(value),
-				d2(value),
-				d3(value),
-				d4(value),
-				d5(value),
-				d6(value),
-				d7(value)
-			);
-		};
-	}
-
-	function decodeObject8(f, d1, d2, d3, d4, d5, d6, d7, d8) {
-		return function(value) {
-			return A8( f,
-				d1(value),
-				d2(value),
-				d3(value),
-				d4(value),
-				d5(value),
-				d6(value),
-				d7(value),
-				d8(value)
-			);
-		};
-	}
-
-
-	// TUPLES
-
-	function decodeTuple1(f, d1) {
-		return function(value) {
-			if ( !(value instanceof Array) || value.length !== 1 ) {
-				crash('a Tuple of length 1', value);
-			}
-			return f( d1(value[0]) );
-		};
-	}
-
-	function decodeTuple2(f, d1, d2) {
-		return function(value) {
-			if ( !(value instanceof Array) || value.length !== 2 ) {
-				crash('a Tuple of length 2', value);
-			}
-			return A2( f, d1(value[0]), d2(value[1]) );
-		};
-	}
-
-	function decodeTuple3(f, d1, d2, d3) {
-		return function(value) {
-			if ( !(value instanceof Array) || value.length !== 3 ) {
-				crash('a Tuple of length 3', value);
-			}
-			return A3( f, d1(value[0]), d2(value[1]), d3(value[2]) );
-		};
-	}
-
-
-	function decodeTuple4(f, d1, d2, d3, d4) {
-		return function(value) {
-			if ( !(value instanceof Array) || value.length !== 4 ) {
-				crash('a Tuple of length 4', value);
-			}
-			return A4( f, d1(value[0]), d2(value[1]), d3(value[2]), d4(value[3]) );
-		};
-	}
-
-
-	function decodeTuple5(f, d1, d2, d3, d4, d5) {
-		return function(value) {
-			if ( !(value instanceof Array) || value.length !== 5 ) {
-				crash('a Tuple of length 5', value);
-			}
-			return A5( f,
-				d1(value[0]),
-				d2(value[1]),
-				d3(value[2]),
-				d4(value[3]),
-				d5(value[4])
-			);
-		};
-	}
-
-
-	function decodeTuple6(f, d1, d2, d3, d4, d5, d6) {
-		return function(value) {
-			if ( !(value instanceof Array) || value.length !== 6 ) {
-				crash('a Tuple of length 6', value);
-			}
-			return A6( f,
-				d1(value[0]),
-				d2(value[1]),
-				d3(value[2]),
-				d4(value[3]),
-				d5(value[4]),
-				d6(value[5])
-			);
-		};
-	}
-
-	function decodeTuple7(f, d1, d2, d3, d4, d5, d6, d7) {
-		return function(value) {
-			if ( !(value instanceof Array) || value.length !== 7 ) {
-				crash('a Tuple of length 7', value);
-			}
-			return A7( f,
-				d1(value[0]),
-				d2(value[1]),
-				d3(value[2]),
-				d4(value[3]),
-				d5(value[4]),
-				d6(value[5]),
-				d7(value[6])
-			);
-		};
-	}
-
-
-	function decodeTuple8(f, d1, d2, d3, d4, d5, d6, d7, d8) {
-		return function(value) {
-			if ( !(value instanceof Array) || value.length !== 8 ) {
-				crash('a Tuple of length 8', value);
-			}
-			return A8( f,
-				d1(value[0]),
-				d2(value[1]),
-				d3(value[2]),
-				d4(value[3]),
-				d5(value[4]),
-				d6(value[5]),
-				d7(value[6]),
-				d8(value[7])
-			);
-		};
-	}
-
-
-	// CUSTOM DECODERS
-
-	function decodeValue(value) {
-		return value;
-	}
-
-	function runDecoderValue(decoder, value) {
-		try {
-			return Result.Ok(decoder(value));
-		} catch(e) {
-			return Result.Err(e.message);
-		}
-	}
-
-	function customDecoder(decoder, callback) {
-		return function(value) {
-			var result = callback(decoder(value));
-			if (result.ctor === 'Err') {
-				throw new Error('custom decoder failed: ' + result._0);
-			}
-			return result._0;
-		};
-	}
-
-	function andThen(decode, callback) {
-		return function(value) {
-			var result = decode(value);
-			return callback(result)(value);
-		};
-	}
-
-	function fail(msg) {
-		return function(value) {
-			throw new Error(msg);
-		};
-	}
-
-	function succeed(successValue) {
-		return function(value) {
-			return successValue;
-		};
-	}
-
-
-	// ONE OF MANY
-
-	function oneOf(decoders) {
-		return function(value) {
-			var errors = [];
-			var temp = decoders;
-			while (temp.ctor !== '[]') {
-				try {
-					return temp._0(value);
-				} catch(e) {
-					errors.push(e.message);
-				}
-				temp = temp._1;
-			}
-			throw new Error('expecting one of the following:\n    ' + errors.join('\n    '));
-		};
-	}
-
-	function get(decoder, value) {
-		try {
-			return Result.Ok(decoder(value));
-		} catch(e) {
-			return Result.Err(e.message);
-		}
-	}
-
-
-	// ENCODE / DECODE
-
-	function runDecoderString(decoder, string) {
-		try {
-			return Result.Ok(decoder(JSON.parse(string)));
-		} catch(e) {
-			return Result.Err(e.message);
-		}
-	}
-
-	function encode(indentLevel, value) {
-		return JSON.stringify(value, null, indentLevel);
-	}
-
-	function identity(value) {
-		return value;
-	}
-
-	function encodeObject(keyValuePairs) {
-		var obj = {};
-		while (keyValuePairs.ctor !== '[]') {
-			var pair = keyValuePairs._0;
-			obj[pair._0] = pair._1;
-			keyValuePairs = keyValuePairs._1;
-		}
-		return obj;
-	}
-
-	return localRuntime.Native.Json.values = {
-		encode: F2(encode),
-		runDecoderString: F2(runDecoderString),
-		runDecoderValue: F2(runDecoderValue),
-
-		get: F2(get),
-		oneOf: oneOf,
-
-		decodeNull: decodeNull,
-		decodeInt: decodeInt,
-		decodeFloat: decodeFloat,
-		decodeString: decodeString,
-		decodeBool: decodeBool,
-
-		decodeMaybe: decodeMaybe,
-
-		decodeList: decodeList,
-		decodeArray: decodeArray,
-
-		decodeField: F2(decodeField),
-
-		decodeObject1: F2(decodeObject1),
-		decodeObject2: F3(decodeObject2),
-		decodeObject3: F4(decodeObject3),
-		decodeObject4: F5(decodeObject4),
-		decodeObject5: F6(decodeObject5),
-		decodeObject6: F7(decodeObject6),
-		decodeObject7: F8(decodeObject7),
-		decodeObject8: F9(decodeObject8),
-		decodeKeyValuePairs: decodeKeyValuePairs,
-
-		decodeTuple1: F2(decodeTuple1),
-		decodeTuple2: F3(decodeTuple2),
-		decodeTuple3: F4(decodeTuple3),
-		decodeTuple4: F5(decodeTuple4),
-		decodeTuple5: F6(decodeTuple5),
-		decodeTuple6: F7(decodeTuple6),
-		decodeTuple7: F8(decodeTuple7),
-		decodeTuple8: F9(decodeTuple8),
-
-		andThen: F2(andThen),
-		decodeValue: decodeValue,
-		customDecoder: F2(customDecoder),
-		fail: fail,
-		succeed: succeed,
-
-		identity: identity,
-		encodeNull: null,
-		encodeArray: ElmArray.toJSArray,
-		encodeList: List.toArray,
-		encodeObject: encodeObject
-
-	};
-};
-
 Elm.Json = Elm.Json || {};
 Elm.Json.Encode = Elm.Json.Encode || {};
 Elm.Json.Encode.make = function (_elm) {
@@ -10189,6 +9881,642 @@ Elm.Json.Decode.make = function (_elm) {
                                     ,andThen: andThen
                                     ,value: value
                                     ,customDecoder: customDecoder};
+};
+Elm.Native.Date = {};
+Elm.Native.Date.make = function(localRuntime) {
+	localRuntime.Native = localRuntime.Native || {};
+	localRuntime.Native.Date = localRuntime.Native.Date || {};
+	if (localRuntime.Native.Date.values)
+	{
+		return localRuntime.Native.Date.values;
+	}
+
+	var Result = Elm.Result.make(localRuntime);
+
+	function readDate(str)
+	{
+		var date = new Date(str);
+		return isNaN(date.getTime())
+			? Result.Err('unable to parse \'' + str + '\' as a date')
+			: Result.Ok(date);
+	}
+
+	var dayTable = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	var monthTable =
+		['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+		 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+
+	return localRuntime.Native.Date.values = {
+		read: readDate,
+		year: function(d) { return d.getFullYear(); },
+		month: function(d) { return { ctor: monthTable[d.getMonth()] }; },
+		day: function(d) { return d.getDate(); },
+		hour: function(d) { return d.getHours(); },
+		minute: function(d) { return d.getMinutes(); },
+		second: function(d) { return d.getSeconds(); },
+		millisecond: function(d) { return d.getMilliseconds(); },
+		toTime: function(d) { return d.getTime(); },
+		fromTime: function(t) { return new Date(t); },
+		dayOfWeek: function(d) { return { ctor: dayTable[d.getDay()] }; }
+	};
+};
+
+Elm.Native.Time = {};
+
+Elm.Native.Time.make = function(localRuntime)
+{
+	localRuntime.Native = localRuntime.Native || {};
+	localRuntime.Native.Time = localRuntime.Native.Time || {};
+	if (localRuntime.Native.Time.values)
+	{
+		return localRuntime.Native.Time.values;
+	}
+
+	var NS = Elm.Native.Signal.make(localRuntime);
+	var Maybe = Elm.Maybe.make(localRuntime);
+
+
+	// FRAMES PER SECOND
+
+	function fpsWhen(desiredFPS, isOn)
+	{
+		var msPerFrame = 1000 / desiredFPS;
+		var ticker = NS.input('fps-' + desiredFPS, null);
+
+		function notifyTicker()
+		{
+			localRuntime.notify(ticker.id, null);
+		}
+
+		function firstArg(x, y)
+		{
+			return x;
+		}
+
+		// input fires either when isOn changes, or when ticker fires.
+		// Its value is a tuple with the current timestamp, and the state of isOn
+		var input = NS.timestamp(A3(NS.map2, F2(firstArg), NS.dropRepeats(isOn), ticker));
+
+		var initialState = {
+			isOn: false,
+			time: localRuntime.timer.programStart,
+			delta: 0
+		};
+
+		var timeoutId;
+
+		function update(input, state)
+		{
+			var currentTime = input._0;
+			var isOn = input._1;
+			var wasOn = state.isOn;
+			var previousTime = state.time;
+
+			if (isOn)
+			{
+				timeoutId = localRuntime.setTimeout(notifyTicker, msPerFrame);
+			}
+			else if (wasOn)
+			{
+				clearTimeout(timeoutId);
+			}
+
+			return {
+				isOn: isOn,
+				time: currentTime,
+				delta: (isOn && !wasOn) ? 0 : currentTime - previousTime
+			};
+		}
+
+		return A2(
+			NS.map,
+			function(state) { return state.delta; },
+			A3(NS.foldp, F2(update), update(input.value, initialState), input)
+		);
+	}
+
+
+	// EVERY
+
+	function every(t)
+	{
+		var ticker = NS.input('every-' + t, null);
+		function tellTime()
+		{
+			localRuntime.notify(ticker.id, null);
+		}
+		var clock = A2(NS.map, fst, NS.timestamp(ticker));
+		setInterval(tellTime, t);
+		return clock;
+	}
+
+
+	function fst(pair)
+	{
+		return pair._0;
+	}
+
+
+	function read(s)
+	{
+		var t = Date.parse(s);
+		return isNaN(t) ? Maybe.Nothing : Maybe.Just(t);
+	}
+
+	return localRuntime.Native.Time.values = {
+		fpsWhen: F2(fpsWhen),
+		every: every,
+		toDate: function(t) { return new Date(t); },
+		read: read
+	};
+};
+
+Elm.Time = Elm.Time || {};
+Elm.Time.make = function (_elm) {
+   "use strict";
+   _elm.Time = _elm.Time || {};
+   if (_elm.Time.values) return _elm.Time.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Native$Signal = Elm.Native.Signal.make(_elm),
+   $Native$Time = Elm.Native.Time.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var _op = {};
+   var delay = $Native$Signal.delay;
+   var since = F2(function (time,signal) {
+      var stop = A2($Signal.map,
+      $Basics.always(-1),
+      A2(delay,time,signal));
+      var start = A2($Signal.map,$Basics.always(1),signal);
+      var delaydiff = A3($Signal.foldp,
+      F2(function (x,y) {    return x + y;}),
+      0,
+      A2($Signal.merge,start,stop));
+      return A2($Signal.map,
+      F2(function (x,y) {    return !_U.eq(x,y);})(0),
+      delaydiff);
+   });
+   var timestamp = $Native$Signal.timestamp;
+   var every = $Native$Time.every;
+   var fpsWhen = $Native$Time.fpsWhen;
+   var fps = function (targetFrames) {
+      return A2(fpsWhen,targetFrames,$Signal.constant(true));
+   };
+   var inMilliseconds = function (t) {    return t;};
+   var millisecond = 1;
+   var second = 1000 * millisecond;
+   var minute = 60 * second;
+   var hour = 60 * minute;
+   var inHours = function (t) {    return t / hour;};
+   var inMinutes = function (t) {    return t / minute;};
+   var inSeconds = function (t) {    return t / second;};
+   return _elm.Time.values = {_op: _op
+                             ,millisecond: millisecond
+                             ,second: second
+                             ,minute: minute
+                             ,hour: hour
+                             ,inMilliseconds: inMilliseconds
+                             ,inSeconds: inSeconds
+                             ,inMinutes: inMinutes
+                             ,inHours: inHours
+                             ,fps: fps
+                             ,fpsWhen: fpsWhen
+                             ,every: every
+                             ,timestamp: timestamp
+                             ,delay: delay
+                             ,since: since};
+};
+Elm.Date = Elm.Date || {};
+Elm.Date.make = function (_elm) {
+   "use strict";
+   _elm.Date = _elm.Date || {};
+   if (_elm.Date.values) return _elm.Date.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Native$Date = Elm.Native.Date.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Time = Elm.Time.make(_elm);
+   var _op = {};
+   var millisecond = $Native$Date.millisecond;
+   var second = $Native$Date.second;
+   var minute = $Native$Date.minute;
+   var hour = $Native$Date.hour;
+   var dayOfWeek = $Native$Date.dayOfWeek;
+   var day = $Native$Date.day;
+   var month = $Native$Date.month;
+   var year = $Native$Date.year;
+   var fromTime = $Native$Date.fromTime;
+   var toTime = $Native$Date.toTime;
+   var fromString = $Native$Date.read;
+   var Dec = {ctor: "Dec"};
+   var Nov = {ctor: "Nov"};
+   var Oct = {ctor: "Oct"};
+   var Sep = {ctor: "Sep"};
+   var Aug = {ctor: "Aug"};
+   var Jul = {ctor: "Jul"};
+   var Jun = {ctor: "Jun"};
+   var May = {ctor: "May"};
+   var Apr = {ctor: "Apr"};
+   var Mar = {ctor: "Mar"};
+   var Feb = {ctor: "Feb"};
+   var Jan = {ctor: "Jan"};
+   var Sun = {ctor: "Sun"};
+   var Sat = {ctor: "Sat"};
+   var Fri = {ctor: "Fri"};
+   var Thu = {ctor: "Thu"};
+   var Wed = {ctor: "Wed"};
+   var Tue = {ctor: "Tue"};
+   var Mon = {ctor: "Mon"};
+   var Date = {ctor: "Date"};
+   return _elm.Date.values = {_op: _op
+                             ,fromString: fromString
+                             ,toTime: toTime
+                             ,fromTime: fromTime
+                             ,year: year
+                             ,month: month
+                             ,day: day
+                             ,dayOfWeek: dayOfWeek
+                             ,hour: hour
+                             ,minute: minute
+                             ,second: second
+                             ,millisecond: millisecond
+                             ,Jan: Jan
+                             ,Feb: Feb
+                             ,Mar: Mar
+                             ,Apr: Apr
+                             ,May: May
+                             ,Jun: Jun
+                             ,Jul: Jul
+                             ,Aug: Aug
+                             ,Sep: Sep
+                             ,Oct: Oct
+                             ,Nov: Nov
+                             ,Dec: Dec
+                             ,Mon: Mon
+                             ,Tue: Tue
+                             ,Wed: Wed
+                             ,Thu: Thu
+                             ,Fri: Fri
+                             ,Sat: Sat
+                             ,Sun: Sun};
+};
+Elm.Set = Elm.Set || {};
+Elm.Set.make = function (_elm) {
+   "use strict";
+   _elm.Set = _elm.Set || {};
+   if (_elm.Set.values) return _elm.Set.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Dict = Elm.Dict.make(_elm),
+   $List = Elm.List.make(_elm);
+   var _op = {};
+   var foldr = F3(function (f,b,_p0) {
+      var _p1 = _p0;
+      return A3($Dict.foldr,
+      F3(function (k,_p2,b) {    return A2(f,k,b);}),
+      b,
+      _p1._0);
+   });
+   var foldl = F3(function (f,b,_p3) {
+      var _p4 = _p3;
+      return A3($Dict.foldl,
+      F3(function (k,_p5,b) {    return A2(f,k,b);}),
+      b,
+      _p4._0);
+   });
+   var toList = function (_p6) {
+      var _p7 = _p6;
+      return $Dict.keys(_p7._0);
+   };
+   var size = function (_p8) {
+      var _p9 = _p8;
+      return $Dict.size(_p9._0);
+   };
+   var member = F2(function (k,_p10) {
+      var _p11 = _p10;
+      return A2($Dict.member,k,_p11._0);
+   });
+   var isEmpty = function (_p12) {
+      var _p13 = _p12;
+      return $Dict.isEmpty(_p13._0);
+   };
+   var Set_elm_builtin = function (a) {
+      return {ctor: "Set_elm_builtin",_0: a};
+   };
+   var empty = Set_elm_builtin($Dict.empty);
+   var singleton = function (k) {
+      return Set_elm_builtin(A2($Dict.singleton,
+      k,
+      {ctor: "_Tuple0"}));
+   };
+   var insert = F2(function (k,_p14) {
+      var _p15 = _p14;
+      return Set_elm_builtin(A3($Dict.insert,
+      k,
+      {ctor: "_Tuple0"},
+      _p15._0));
+   });
+   var fromList = function (xs) {
+      return A3($List.foldl,insert,empty,xs);
+   };
+   var map = F2(function (f,s) {
+      return fromList(A2($List.map,f,toList(s)));
+   });
+   var remove = F2(function (k,_p16) {
+      var _p17 = _p16;
+      return Set_elm_builtin(A2($Dict.remove,k,_p17._0));
+   });
+   var union = F2(function (_p19,_p18) {
+      var _p20 = _p19;
+      var _p21 = _p18;
+      return Set_elm_builtin(A2($Dict.union,_p20._0,_p21._0));
+   });
+   var intersect = F2(function (_p23,_p22) {
+      var _p24 = _p23;
+      var _p25 = _p22;
+      return Set_elm_builtin(A2($Dict.intersect,_p24._0,_p25._0));
+   });
+   var diff = F2(function (_p27,_p26) {
+      var _p28 = _p27;
+      var _p29 = _p26;
+      return Set_elm_builtin(A2($Dict.diff,_p28._0,_p29._0));
+   });
+   var filter = F2(function (p,_p30) {
+      var _p31 = _p30;
+      return Set_elm_builtin(A2($Dict.filter,
+      F2(function (k,_p32) {    return p(k);}),
+      _p31._0));
+   });
+   var partition = F2(function (p,_p33) {
+      var _p34 = _p33;
+      var _p35 = A2($Dict.partition,
+      F2(function (k,_p36) {    return p(k);}),
+      _p34._0);
+      var p1 = _p35._0;
+      var p2 = _p35._1;
+      return {ctor: "_Tuple2"
+             ,_0: Set_elm_builtin(p1)
+             ,_1: Set_elm_builtin(p2)};
+   });
+   return _elm.Set.values = {_op: _op
+                            ,empty: empty
+                            ,singleton: singleton
+                            ,insert: insert
+                            ,remove: remove
+                            ,isEmpty: isEmpty
+                            ,member: member
+                            ,size: size
+                            ,foldl: foldl
+                            ,foldr: foldr
+                            ,map: map
+                            ,filter: filter
+                            ,partition: partition
+                            ,union: union
+                            ,intersect: intersect
+                            ,diff: diff
+                            ,toList: toList
+                            ,fromList: fromList};
+};
+Elm.Json = Elm.Json || {};
+Elm.Json.Decode = Elm.Json.Decode || {};
+Elm.Json.Decode.Extra = Elm.Json.Decode.Extra || {};
+Elm.Json.Decode.Extra.make = function (_elm) {
+   "use strict";
+   _elm.Json = _elm.Json || {};
+   _elm.Json.Decode = _elm.Json.Decode || {};
+   _elm.Json.Decode.Extra = _elm.Json.Decode.Extra || {};
+   if (_elm.Json.Decode.Extra.values)
+   return _elm.Json.Decode.Extra.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Date = Elm.Date.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Dict = Elm.Dict.make(_elm),
+   $Json$Decode = Elm.Json.Decode.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Set = Elm.Set.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var _op = {};
+   var lazy = function (getDecoder) {
+      return A2($Json$Decode.customDecoder,
+      $Json$Decode.value,
+      function (rawValue) {
+         return A2($Json$Decode.decodeValue,
+         getDecoder({ctor: "_Tuple0"}),
+         rawValue);
+      });
+   };
+   var maybeNull = function (decoder) {
+      return $Json$Decode.oneOf(_U.list([$Json$Decode.$null($Maybe.Nothing)
+                                        ,A2($Json$Decode.map,$Maybe.Just,decoder)]));
+   };
+   var withDefault = F2(function (fallback,decoder) {
+      return A2($Json$Decode.andThen,
+      $Json$Decode.maybe(decoder),
+      function (_p0) {
+         return $Json$Decode.succeed(A2($Maybe.withDefault,
+         fallback,
+         _p0));
+      });
+   });
+   var decodeDictFromTuples = F2(function (keyDecoder,tuples) {
+      var _p1 = tuples;
+      if (_p1.ctor === "[]") {
+            return $Json$Decode.succeed($Dict.empty);
+         } else {
+            var _p2 = A2($Json$Decode.decodeString,keyDecoder,_p1._0._0);
+            if (_p2.ctor === "Ok") {
+                  return A2($Json$Decode.andThen,
+                  A2(decodeDictFromTuples,keyDecoder,_p1._1),
+                  function (_p3) {
+                     return $Json$Decode.succeed(A3($Dict.insert,
+                     _p2._0,
+                     _p1._0._1,
+                     _p3));
+                  });
+               } else {
+                  return $Json$Decode.fail(_p2._0);
+               }
+         }
+   });
+   var dict2 = F2(function (keyDecoder,valueDecoder) {
+      return A2($Json$Decode.andThen,
+      $Json$Decode.dict(valueDecoder),
+      function (_p4) {
+         return A2(decodeDictFromTuples,keyDecoder,$Dict.toList(_p4));
+      });
+   });
+   var set = function (decoder) {
+      return A2($Json$Decode.andThen,
+      $Json$Decode.list(decoder),
+      function (_p5) {
+         return $Json$Decode.succeed($Set.fromList(_p5));
+      });
+   };
+   var date = A2($Json$Decode.customDecoder,
+   $Json$Decode.string,
+   $Date.fromString);
+   var apply = F2(function (f,aDecoder) {
+      return A2($Json$Decode.andThen,
+      f,
+      function (f$) {
+         return A2($Json$Decode.map,f$,aDecoder);
+      });
+   });
+   _op["|:"] = apply;
+   return _elm.Json.Decode.Extra.values = {_op: _op
+                                          ,date: date
+                                          ,apply: apply
+                                          ,set: set
+                                          ,dict2: dict2
+                                          ,withDefault: withDefault
+                                          ,maybeNull: maybeNull
+                                          ,lazy: lazy};
+};
+Elm.Native = Elm.Native || {};
+Elm.Native.History = {};
+Elm.Native.History.make = function(localRuntime){
+
+  localRuntime.Native = localRuntime.Native || {};
+  localRuntime.Native.History = localRuntime.Native.History || {};
+
+  if (localRuntime.Native.History.values){
+    return localRuntime.Native.History.values;
+  }
+
+  var NS = Elm.Native.Signal.make(localRuntime);
+  var Task = Elm.Native.Task.make(localRuntime);
+  var Utils = Elm.Native.Utils.make(localRuntime);
+  var node = window;
+
+  // path : Signal String
+  var path = NS.input('History.path', window.location.pathname);
+
+  // length : Signal Int
+  var length = NS.input('History.length', window.history.length);
+
+  // hash : Signal String
+  var hash = NS.input('History.hash', window.location.hash);
+
+  localRuntime.addListener([path.id, length.id], node, 'popstate', function getPath(event){
+    localRuntime.notify(path.id, window.location.pathname);
+    localRuntime.notify(length.id, window.history.length);
+    localRuntime.notify(hash.id, window.location.hash);
+  });
+
+  localRuntime.addListener([hash.id], node, 'hashchange', function getHash(event){
+    localRuntime.notify(hash.id, window.location.hash);
+  });
+
+  // setPath : String -> Task error ()
+  var setPath = function(urlpath){
+    return Task.asyncFunction(function(callback){
+      setTimeout(function(){
+        localRuntime.notify(path.id, urlpath);
+        window.history.pushState({}, "", urlpath);
+        localRuntime.notify(hash.id, window.location.hash);
+        localRuntime.notify(length.id, window.history.length);
+
+      },0);
+      return callback(Task.succeed(Utils.Tuple0));
+    });
+  };
+
+  // replacePath : String -> Task error ()
+  var replacePath = function(urlpath){
+    return Task.asyncFunction(function(callback){
+      setTimeout(function(){
+        localRuntime.notify(path.id, urlpath);
+        window.history.replaceState({}, "", urlpath);
+        localRuntime.notify(hash.id, window.location.hash);
+        localRuntime.notify(length.id, window.history.length);
+      },0);
+      return callback(Task.succeed(Utils.Tuple0));
+    });
+  };
+
+  // go : Int -> Task error ()
+  var go = function(n){
+    return Task.asyncFunction(function(callback){
+      setTimeout(function(){
+        window.history.go(n);
+        localRuntime.notify(length.id, window.history.length);
+        localRuntime.notify(hash.id, window.location.hash);
+      }, 0);
+      return callback(Task.succeed(Utils.Tuple0));
+    });
+  };
+
+  // back : Task error ()
+  var back = Task.asyncFunction(function(callback){
+    setTimeout(function(){
+      localRuntime.notify(hash.id, window.location.hash);
+      window.history.back();
+      localRuntime.notify(length.id, window.history.length);
+
+    }, 0);
+    return callback(Task.succeed(Utils.Tuple0));
+  });
+
+  // forward : Task error ()
+  var forward = Task.asyncFunction(function(callback){
+    setTimeout(function(){
+      window.history.forward();
+      localRuntime.notify(length.id, window.history.length);
+      localRuntime.notify(hash.id, window.location.hash);
+    }, 0);
+    return callback(Task.succeed(Utils.Tuple0));
+  });
+
+
+
+  return {
+    path        : path,
+    setPath     : setPath,
+    replacePath : replacePath,
+    go          : go,
+    back        : back,
+    forward     : forward,
+    length      : length,
+    hash        : hash
+  };
+
+};
+
+Elm.History = Elm.History || {};
+Elm.History.make = function (_elm) {
+   "use strict";
+   _elm.History = _elm.History || {};
+   if (_elm.History.values) return _elm.History.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Native$History = Elm.Native.History.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm),
+   $Task = Elm.Task.make(_elm);
+   var _op = {};
+   var path = $Native$History.path;
+   var hash = $Native$History.hash;
+   var length = $Native$History.length;
+   var forward = $Native$History.forward;
+   var back = $Native$History.back;
+   var go = $Native$History.go;
+   var replacePath = $Native$History.replacePath;
+   var setPath = $Native$History.setPath;
+   return _elm.History.values = {_op: _op
+                                ,setPath: setPath
+                                ,replacePath: replacePath
+                                ,go: go
+                                ,back: back
+                                ,forward: forward
+                                ,length: length
+                                ,hash: hash
+                                ,path: path};
 };
 Elm.Native.Effects = {};
 Elm.Native.Effects.make = function(localRuntime) {
@@ -13662,6 +13990,310 @@ Elm.Hop.Navigate.make = function (_elm) {
                                      ,removeQuery: removeQuery
                                      ,clearQuery: clearQuery};
 };
+Elm.Manifests = Elm.Manifests || {};
+Elm.Manifests.Models = Elm.Manifests.Models || {};
+Elm.Manifests.Models.make = function (_elm) {
+   "use strict";
+   _elm.Manifests = _elm.Manifests || {};
+   _elm.Manifests.Models = _elm.Manifests.Models || {};
+   if (_elm.Manifests.Models.values)
+   return _elm.Manifests.Models.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Json$Decode = Elm.Json.Decode.make(_elm),
+   $Json$Decode$Extra = Elm.Json.Decode.Extra.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var _op = {};
+   var newManifest = {name: ""
+                     ,catalogs: $Maybe.Nothing
+                     ,displayName: $Maybe.Nothing
+                     ,includedManifests: $Maybe.Nothing
+                     ,notes: $Maybe.Nothing
+                     ,user: $Maybe.Nothing
+                     ,managedInstalls: $Maybe.Nothing
+                     ,managedUninstalls: $Maybe.Nothing
+                     ,optionalInstalls: $Maybe.Nothing};
+   var Manifest = F9(function (a,b,c,d,e,f,g,h,i) {
+      return {name: a
+             ,catalogs: b
+             ,displayName: c
+             ,includedManifests: d
+             ,notes: e
+             ,user: f
+             ,managedInstalls: g
+             ,managedUninstalls: h
+             ,optionalInstalls: i};
+   });
+   var manifest = A2($Json$Decode$Extra._op["|:"],
+   A2($Json$Decode$Extra._op["|:"],
+   A2($Json$Decode$Extra._op["|:"],
+   A2($Json$Decode$Extra._op["|:"],
+   A2($Json$Decode$Extra._op["|:"],
+   A2($Json$Decode$Extra._op["|:"],
+   A2($Json$Decode$Extra._op["|:"],
+   A2($Json$Decode$Extra._op["|:"],
+   A2($Json$Decode$Extra._op["|:"],
+   $Json$Decode.succeed(Manifest),
+   A2($Json$Decode._op[":="],"filename",$Json$Decode.string)),
+   $Json$Decode.maybe(A2($Json$Decode._op[":="],
+   "catalogs",
+   $Json$Decode.list($Json$Decode.string)))),
+   $Json$Decode.maybe(A2($Json$Decode._op[":="],
+   "display_name",
+   $Json$Decode.string))),
+   $Json$Decode.maybe(A2($Json$Decode._op[":="],
+   "include_manifests",
+   $Json$Decode.list($Json$Decode.string)))),
+   $Json$Decode.maybe(A2($Json$Decode._op[":="],
+   "notes",
+   $Json$Decode.string))),
+   $Json$Decode.maybe(A2($Json$Decode._op[":="],
+   "user",
+   $Json$Decode.string))),
+   $Json$Decode.maybe(A2($Json$Decode._op[":="],
+   "managed_installs",
+   $Json$Decode.list($Json$Decode.string)))),
+   $Json$Decode.maybe(A2($Json$Decode._op[":="],
+   "managed_uninstalls",
+   $Json$Decode.list($Json$Decode.string)))),
+   $Json$Decode.maybe(A2($Json$Decode._op[":="],
+   "optional_installs",
+   $Json$Decode.list($Json$Decode.string))));
+   return _elm.Manifests.Models.values = {_op: _op
+                                         ,Manifest: Manifest
+                                         ,newManifest: newManifest
+                                         ,manifest: manifest};
+};
+Elm.Manifests = Elm.Manifests || {};
+Elm.Manifests.Actions = Elm.Manifests.Actions || {};
+Elm.Manifests.Actions.make = function (_elm) {
+   "use strict";
+   _elm.Manifests = _elm.Manifests || {};
+   _elm.Manifests.Actions = _elm.Manifests.Actions || {};
+   if (_elm.Manifests.Actions.values)
+   return _elm.Manifests.Actions.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Http = Elm.Http.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Manifests$Models = Elm.Manifests.Models.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var _op = {};
+   var DeleteManifest = function (a) {
+      return {ctor: "DeleteManifest",_0: a};
+   };
+   var NoOp = {ctor: "NoOp"};
+   var HopAction = function (a) {
+      return {ctor: "HopAction",_0: a};
+   };
+   var SortBy = function (a) {    return {ctor: "SortBy",_0: a};};
+   var Save = function (a) {    return {ctor: "Save",_0: a};};
+   var UpdateDisplayName = function (a) {
+      return {ctor: "UpdateDisplayName",_0: a};
+   };
+   var DiscardSave = {ctor: "DiscardSave"};
+   var EditManifest = function (a) {
+      return {ctor: "EditManifest",_0: a};
+   };
+   var GetManifest = function (a) {
+      return {ctor: "GetManifest",_0: a};
+   };
+   var GetManifests = function (a) {
+      return {ctor: "GetManifests",_0: a};
+   };
+   return _elm.Manifests.Actions.values = {_op: _op
+                                          ,GetManifests: GetManifests
+                                          ,GetManifest: GetManifest
+                                          ,EditManifest: EditManifest
+                                          ,DiscardSave: DiscardSave
+                                          ,UpdateDisplayName: UpdateDisplayName
+                                          ,Save: Save
+                                          ,SortBy: SortBy
+                                          ,HopAction: HopAction
+                                          ,NoOp: NoOp
+                                          ,DeleteManifest: DeleteManifest};
+};
+Elm.Client = Elm.Client || {};
+Elm.Client.Http = Elm.Client.Http || {};
+Elm.Client.Http.make = function (_elm) {
+   "use strict";
+   _elm.Client = _elm.Client || {};
+   _elm.Client.Http = _elm.Client.Http || {};
+   if (_elm.Client.Http.values) return _elm.Client.Http.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Effects = Elm.Effects.make(_elm),
+   $Http = Elm.Http.make(_elm),
+   $Json$Decode = Elm.Json.Decode.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Manifests$Actions = Elm.Manifests.Actions.make(_elm),
+   $Manifests$Models = Elm.Manifests.Models.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm),
+   $Task = Elm.Task.make(_elm);
+   var _op = {};
+   var getManifest = function (name) {
+      var url = A2($Basics._op["++"],"/api/manifests/",name);
+      return $Effects.task(A2($Task.map,
+      $Manifests$Actions.GetManifest,
+      $Task.toMaybe(A2($Http.get,$Manifests$Models.manifest,url))));
+   };
+   var getManifests = $Effects.task(A2($Task.map,
+   $Manifests$Actions.GetManifests,
+   $Task.toResult(A2($Http.get,
+   $Json$Decode.list($Manifests$Models.manifest),
+   "/api/manifests"))));
+   var reportError = function (error) {
+      var _p0 = error;
+      switch (_p0.ctor)
+      {case "Timeout": return A2($Debug.log,"API timeout",error);
+         case "NetworkError": return A2($Debug.log,
+           "Network error contacting API",
+           error);
+         case "UnexpectedPayload": return A2($Debug.log,
+           A2($Basics._op["++"],"Unexpected payload from API: ",_p0._0),
+           error);
+         default: return A2($Debug.log,
+           A2($Basics._op["++"],
+           "Unexpected status/payload from API: ",
+           A2($Basics._op["++"],
+           $Basics.toString(_p0._0),
+           A2($Basics._op["++"],"/",_p0._1))),
+           error);}
+   };
+   return _elm.Client.Http.values = {_op: _op
+                                    ,reportError: reportError
+                                    ,getManifests: getManifests
+                                    ,getManifest: getManifest};
+};
+Elm.Manifests = Elm.Manifests || {};
+Elm.Manifests.Update = Elm.Manifests.Update || {};
+Elm.Manifests.Update.make = function (_elm) {
+   "use strict";
+   _elm.Manifests = _elm.Manifests || {};
+   _elm.Manifests.Update = _elm.Manifests.Update || {};
+   if (_elm.Manifests.Update.values)
+   return _elm.Manifests.Update.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Client$Http = Elm.Client.Http.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Effects = Elm.Effects.make(_elm),
+   $Hop$Navigate = Elm.Hop.Navigate.make(_elm),
+   $Html = Elm.Html.make(_elm),
+   $Html$Events = Elm.Html.Events.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Manifests$Actions = Elm.Manifests.Actions.make(_elm),
+   $Manifests$Models = Elm.Manifests.Models.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var _op = {};
+   var onInput = F2(function (address,f) {
+      return A3($Html$Events.on,
+      "input",
+      $Html$Events.targetValue,
+      function (v) {
+         return A2($Signal.message,address,f(v));
+      });
+   });
+   var update = F2(function (action,model) {
+      var _p0 = action;
+      switch (_p0.ctor)
+      {case "GetManifests": var _p1 = _p0._0;
+           if (_p1.ctor === "Ok") {
+                 return {ctor: "_Tuple2"
+                        ,_0: _U.update(model,{manifests: _p1._0})
+                        ,_1: $Effects.none};
+              } else {
+                 var _p2 = $Client$Http.reportError(_p1._0);
+                 return {ctor: "_Tuple2",_0: model,_1: $Effects.none};
+              }
+         case "SortBy": return {ctor: "_Tuple2"
+                               ,_0: _U.update(model,
+                               {manifests: $List.reverse(model.manifests)})
+                               ,_1: $Effects.none};
+         case "GetManifest": return {ctor: "_Tuple2"
+                                    ,_0: _U.update(model,{manifestForm: _p0._0})
+                                    ,_1: $Effects.none};
+         case "EditManifest": var _p3 = _p0._0;
+           var filterByID = F2(function (id,manifests) {
+              return $List.head(A2($List.filter,
+              function (manifest) {
+                 return _U.eq(manifest.name,id);
+              },
+              manifests));
+           });
+           var manifest = A2(filterByID,_p3,model.manifests);
+           var path = A2($Basics._op["++"],
+           "/manifests/",
+           A2($Basics._op["++"],_p3,"/edit"));
+           var log = A2($Debug.log,"editing",_p3);
+           return {ctor: "_Tuple2"
+                  ,_0: _U.update(model,
+                  {manifestForm: A2($Debug.log,
+                  "manifestX",
+                  A2(filterByID,_p3,model.manifests))})
+                  ,_1: A2($Effects.map,
+                  $Manifests$Actions.HopAction,
+                  $Hop$Navigate.navigateTo(path))};
+         case "DiscardSave": return {ctor: "_Tuple2"
+                                    ,_0: _U.update(model,{manifestForm: $Maybe.Nothing})
+                                    ,_1: A2($Effects.map,
+                                    $Manifests$Actions.HopAction,
+                                    $Hop$Navigate.navigateTo("/manifests"))};
+         case "UpdateDisplayName":
+         var updateField = F2(function (contents,manifest) {
+              return _U.update(manifest,
+              {displayName: $Maybe.Just(contents)});
+           });
+           var manifest = model.manifestForm;
+           var updatedManifestForm = A2($Maybe.map,
+           updateField(_p0._0),
+           manifest);
+           return {ctor: "_Tuple2"
+                  ,_0: _U.update(model,{manifestForm: updatedManifestForm})
+                  ,_1: $Effects.none};
+         case "Save": var _p4 = _p0._0;
+           var updateManifest = function (existing) {
+              return _U.eq(existing.name,_p4.name) ? _p4 : existing;
+           };
+           var updatedCollection = A2($List.map,
+           updateManifest,
+           model.manifests);
+           return {ctor: "_Tuple2"
+                  ,_0: _U.update(model,{manifests: updatedCollection})
+                  ,_1: A2($Effects.map,
+                  $Manifests$Actions.HopAction,
+                  $Hop$Navigate.navigateTo("/manifests"))};
+         case "HopAction": return {ctor: "_Tuple2"
+                                  ,_0: model
+                                  ,_1: $Effects.none};
+         case "NoOp": return {ctor: "_Tuple2"
+                             ,_0: A2($Debug.log,"model",model)
+                             ,_1: $Effects.none};
+         default: var updatedManifests = A2($List.filter,
+           function (manifest) {
+              return !_U.eq(manifest.name,_p0._0);
+           },
+           model.manifests);
+           return {ctor: "_Tuple2"
+                  ,_0: _U.update(model,{manifests: updatedManifests})
+                  ,_1: $Effects.none};}
+   });
+   return _elm.Manifests.Update.values = {_op: _op
+                                         ,update: update
+                                         ,onInput: onInput};
+};
 Elm.Routing = Elm.Routing || {};
 Elm.Routing.make = function (_elm) {
    "use strict";
@@ -13698,9 +14330,18 @@ Elm.Routing.make = function (_elm) {
                                  ,_1: A2($Effects.map,
                                  HopAction,
                                  $Hop$Navigate.navigateTo(_p0._0))};
-         case "ApplyRoute": return {ctor: "_Tuple2"
-                                   ,_0: _U.update(model,{route: _p0._0._0,location: _p0._0._1})
-                                   ,_1: $Effects.none};
+         case "ApplyRoute": var _p3 = _p0._0._0;
+           var _p2 = _p0._0._1;
+           var _p1 = _p3;
+           if (_p1.ctor === "ManifestEditRoute") {
+                 return {ctor: "_Tuple2"
+                        ,_0: _U.update(model,{route: _p3,location: _p2})
+                        ,_1: $Effects.none};
+              } else {
+                 return {ctor: "_Tuple2"
+                        ,_0: _U.update(model,{route: _p3,location: _p2})
+                        ,_1: $Effects.none};
+              }
          default: return {ctor: "_Tuple2",_0: model,_1: $Effects.none};}
    });
    var Model = F2(function (a,b) {
@@ -13756,217 +14397,6 @@ Elm.Routing.make = function (_elm) {
                                 ,run: run
                                 ,signal: signal};
 };
-Elm.Manifests = Elm.Manifests || {};
-Elm.Manifests.Models = Elm.Manifests.Models || {};
-Elm.Manifests.Models.make = function (_elm) {
-   "use strict";
-   _elm.Manifests = _elm.Manifests || {};
-   _elm.Manifests.Models = _elm.Manifests.Models || {};
-   if (_elm.Manifests.Models.values)
-   return _elm.Manifests.Models.values;
-   var _U = Elm.Native.Utils.make(_elm),
-   $Basics = Elm.Basics.make(_elm),
-   $Debug = Elm.Debug.make(_elm),
-   $Json$Decode = Elm.Json.Decode.make(_elm),
-   $List = Elm.List.make(_elm),
-   $Maybe = Elm.Maybe.make(_elm),
-   $Result = Elm.Result.make(_elm),
-   $Signal = Elm.Signal.make(_elm);
-   var _op = {};
-   var Manifest = F3(function (a,b,c) {
-      return {name: a,catalogs: b,displayName: c};
-   });
-   var manifest = A4($Json$Decode.object3,
-   Manifest,
-   A2($Json$Decode._op[":="],"filename",$Json$Decode.string),
-   $Json$Decode.maybe(A2($Json$Decode._op[":="],
-   "catalogs",
-   $Json$Decode.list($Json$Decode.string))),
-   $Json$Decode.maybe(A2($Json$Decode._op[":="],
-   "display_name",
-   $Json$Decode.string)));
-   return _elm.Manifests.Models.values = {_op: _op
-                                         ,Manifest: Manifest
-                                         ,manifest: manifest};
-};
-Elm.Manifests = Elm.Manifests || {};
-Elm.Manifests.Actions = Elm.Manifests.Actions || {};
-Elm.Manifests.Actions.make = function (_elm) {
-   "use strict";
-   _elm.Manifests = _elm.Manifests || {};
-   _elm.Manifests.Actions = _elm.Manifests.Actions || {};
-   if (_elm.Manifests.Actions.values)
-   return _elm.Manifests.Actions.values;
-   var _U = Elm.Native.Utils.make(_elm),
-   $Basics = Elm.Basics.make(_elm),
-   $Debug = Elm.Debug.make(_elm),
-   $Http = Elm.Http.make(_elm),
-   $List = Elm.List.make(_elm),
-   $Manifests$Models = Elm.Manifests.Models.make(_elm),
-   $Maybe = Elm.Maybe.make(_elm),
-   $Result = Elm.Result.make(_elm),
-   $Signal = Elm.Signal.make(_elm);
-   var _op = {};
-   var NoOp = {ctor: "NoOp"};
-   var HopAction = function (a) {
-      return {ctor: "HopAction",_0: a};
-   };
-   var SortBy = function (a) {    return {ctor: "SortBy",_0: a};};
-   var Save = function (a) {    return {ctor: "Save",_0: a};};
-   var UpdateDisplayName = function (a) {
-      return {ctor: "UpdateDisplayName",_0: a};
-   };
-   var DiscardSave = {ctor: "DiscardSave"};
-   var EditManifest = function (a) {
-      return {ctor: "EditManifest",_0: a};
-   };
-   var GetManifests = function (a) {
-      return {ctor: "GetManifests",_0: a};
-   };
-   return _elm.Manifests.Actions.values = {_op: _op
-                                          ,GetManifests: GetManifests
-                                          ,EditManifest: EditManifest
-                                          ,DiscardSave: DiscardSave
-                                          ,UpdateDisplayName: UpdateDisplayName
-                                          ,Save: Save
-                                          ,SortBy: SortBy
-                                          ,HopAction: HopAction
-                                          ,NoOp: NoOp};
-};
-Elm.Manifests = Elm.Manifests || {};
-Elm.Manifests.Update = Elm.Manifests.Update || {};
-Elm.Manifests.Update.make = function (_elm) {
-   "use strict";
-   _elm.Manifests = _elm.Manifests || {};
-   _elm.Manifests.Update = _elm.Manifests.Update || {};
-   if (_elm.Manifests.Update.values)
-   return _elm.Manifests.Update.values;
-   var _U = Elm.Native.Utils.make(_elm),
-   $Basics = Elm.Basics.make(_elm),
-   $Debug = Elm.Debug.make(_elm),
-   $Effects = Elm.Effects.make(_elm),
-   $Hop$Navigate = Elm.Hop.Navigate.make(_elm),
-   $Html = Elm.Html.make(_elm),
-   $Html$Events = Elm.Html.Events.make(_elm),
-   $Http = Elm.Http.make(_elm),
-   $Json$Decode = Elm.Json.Decode.make(_elm),
-   $List = Elm.List.make(_elm),
-   $Manifests$Actions = Elm.Manifests.Actions.make(_elm),
-   $Manifests$Models = Elm.Manifests.Models.make(_elm),
-   $Maybe = Elm.Maybe.make(_elm),
-   $Result = Elm.Result.make(_elm),
-   $Signal = Elm.Signal.make(_elm),
-   $Task = Elm.Task.make(_elm);
-   var _op = {};
-   var reportError = function (error) {
-      var _p0 = error;
-      switch (_p0.ctor)
-      {case "Timeout": return A2($Debug.log,"API timeout",error);
-         case "NetworkError": return A2($Debug.log,
-           "Network error contacting API",
-           error);
-         case "UnexpectedPayload": return A2($Debug.log,
-           A2($Basics._op["++"],"Unexpected payload from API: ",_p0._0),
-           error);
-         default: return A2($Debug.log,
-           A2($Basics._op["++"],
-           "Unexpected status/payload from API: ",
-           A2($Basics._op["++"],
-           $Basics.toString(_p0._0),
-           A2($Basics._op["++"],"/",_p0._1))),
-           error);}
-   };
-   var onInput = F2(function (address,f) {
-      return A3($Html$Events.on,
-      "input",
-      $Html$Events.targetValue,
-      function (v) {
-         return A2($Signal.message,address,f(v));
-      });
-   });
-   var getManifests = $Effects.task(A2($Task.map,
-   $Manifests$Actions.GetManifests,
-   $Task.toResult(A2($Http.get,
-   $Json$Decode.list($Manifests$Models.manifest),
-   "/api/manifests"))));
-   var update = F2(function (action,model) {
-      var _p1 = action;
-      switch (_p1.ctor)
-      {case "GetManifests": var _p2 = _p1._0;
-           if (_p2.ctor === "Ok") {
-                 return {ctor: "_Tuple2"
-                        ,_0: _U.update(model,{manifests: _p2._0})
-                        ,_1: $Effects.none};
-              } else {
-                 var _p3 = reportError(_p2._0);
-                 return {ctor: "_Tuple2",_0: model,_1: $Effects.none};
-              }
-         case "SortBy": return {ctor: "_Tuple2"
-                               ,_0: _U.update(model,
-                               {manifests: $List.reverse(model.manifests)})
-                               ,_1: $Effects.none};
-         case "EditManifest": var _p4 = _p1._0;
-           var filterByID = F2(function (id,manifests) {
-              return $List.head(A2($List.filter,
-              function (manifest) {
-                 return _U.eq(manifest.name,id);
-              },
-              manifests));
-           });
-           var manifest = A2(filterByID,_p4,model.manifests);
-           var path = A2($Basics._op["++"],
-           "/manifests/",
-           A2($Basics._op["++"],_p4,"/edit"));
-           return {ctor: "_Tuple2"
-                  ,_0: _U.update(model,
-                  {manifestForm: A2($Debug.log,
-                  "manifestX",
-                  A2(filterByID,_p4,model.manifests))})
-                  ,_1: A2($Effects.map,
-                  $Manifests$Actions.HopAction,
-                  $Hop$Navigate.navigateTo(path))};
-         case "DiscardSave": return {ctor: "_Tuple2"
-                                    ,_0: model
-                                    ,_1: A2($Effects.map,
-                                    $Manifests$Actions.HopAction,
-                                    $Hop$Navigate.navigateTo("/manifests"))};
-         case "UpdateDisplayName":
-         var updateField = F2(function (contents,manifest) {
-              return _U.update(manifest,
-              {displayName: $Maybe.Just(contents)});
-           });
-           var manifest = model.manifestForm;
-           var updatedManifestForm = A2($Maybe.map,
-           updateField(_p1._0),
-           manifest);
-           return {ctor: "_Tuple2"
-                  ,_0: _U.update(model,{manifestForm: updatedManifestForm})
-                  ,_1: $Effects.none};
-         case "Save": var _p5 = _p1._0;
-           var updateManifest = function (existing) {
-              return _U.eq(existing.name,_p5.name) ? _p5 : existing;
-           };
-           var updatedCollection = A2($List.map,
-           updateManifest,
-           model.manifests);
-           return {ctor: "_Tuple2"
-                  ,_0: _U.update(model,{manifests: updatedCollection})
-                  ,_1: A2($Effects.map,
-                  $Manifests$Actions.HopAction,
-                  $Hop$Navigate.navigateTo("/manifests"))};
-         case "HopAction": return {ctor: "_Tuple2"
-                                  ,_0: model
-                                  ,_1: $Effects.none};
-         default: return {ctor: "_Tuple2"
-                         ,_0: A2($Debug.log,"model",model)
-                         ,_1: $Effects.none};}
-   });
-   return _elm.Manifests.Update.values = {_op: _op
-                                         ,update: update
-                                         ,getManifests: getManifests
-                                         ,onInput: onInput
-                                         ,reportError: reportError};
-};
 Elm.Models = Elm.Models || {};
 Elm.Models.make = function (_elm) {
    "use strict";
@@ -14002,7 +14432,6 @@ Elm.Update.make = function (_elm) {
    $Basics = Elm.Basics.make(_elm),
    $Debug = Elm.Debug.make(_elm),
    $Effects = Elm.Effects.make(_elm),
-   $Http = Elm.Http.make(_elm),
    $List = Elm.List.make(_elm),
    $Manifests$Actions = Elm.Manifests.Actions.make(_elm),
    $Manifests$Update = Elm.Manifests.Update.make(_elm),
@@ -14011,24 +14440,6 @@ Elm.Update.make = function (_elm) {
    $Routing = Elm.Routing.make(_elm),
    $Signal = Elm.Signal.make(_elm);
    var _op = {};
-   var reportError = function (error) {
-      var _p0 = error;
-      switch (_p0.ctor)
-      {case "Timeout": return A2($Debug.log,"API timeout",error);
-         case "NetworkError": return A2($Debug.log,
-           "Network error contacting API",
-           error);
-         case "UnexpectedPayload": return A2($Debug.log,
-           A2($Basics._op["++"],"Unexpected payload from API: ",_p0._0),
-           error);
-         default: return A2($Debug.log,
-           A2($Basics._op["++"],
-           "Unexpected status/payload from API: ",
-           A2($Basics._op["++"],
-           $Basics.toString(_p0._0),
-           A2($Basics._op["++"],"/",_p0._1))),
-           error);}
-   };
    var ManifestAction = function (a) {
       return {ctor: "ManifestAction",_0: a};
    };
@@ -14036,22 +14447,24 @@ Elm.Update.make = function (_elm) {
       return {ctor: "RoutingAction",_0: a};
    };
    var update = F2(function (action,model) {
-      var _p1 = A2($Debug.log,"action",action);
-      switch (_p1.ctor)
-      {case "RoutingAction": var _p2 = A2($Routing.update,
-           _p1._0,
+      var _p0 = A2($Debug.log,"action",action);
+      switch (_p0.ctor)
+      {case "RoutingAction": var _p1 = A2($Routing.update,
+           _p0._0,
            model.routing);
-           var updatedRouting = _p2._0;
-           var fx = _p2._1;
+           var updatedRouting = _p1._0;
+           var fx = _p1._1;
            return {ctor: "_Tuple2"
                   ,_0: _U.update(model,{routing: updatedRouting})
                   ,_1: A2($Effects.map,RoutingAction,fx)};
          case "NoOp": return {ctor: "_Tuple2"
                              ,_0: model
                              ,_1: $Effects.none};
-         default: var _p3 = A2($Manifests$Update.update,_p1._0,model);
-           var updatedModel = _p3._0;
-           var fx = _p3._1;
+         default: var _p3 = _p0._0;
+           var _p2 = A2($Manifests$Update.update,_p3,model);
+           var updatedModel = _p2._0;
+           var fx = _p2._1;
+           var log = A2($Debug.log,"sub",_p3);
            return {ctor: "_Tuple2"
                   ,_0: updatedModel
                   ,_1: A2($Effects.map,ManifestAction,fx)};}
@@ -14061,8 +14474,7 @@ Elm.Update.make = function (_elm) {
                                ,NoOp: NoOp
                                ,RoutingAction: RoutingAction
                                ,ManifestAction: ManifestAction
-                               ,update: update
-                               ,reportError: reportError};
+                               ,update: update};
 };
 Elm.Manifests = Elm.Manifests || {};
 Elm.Manifests.Utils = Elm.Manifests.Utils || {};
@@ -14109,64 +14521,14 @@ Elm.Manifests.View.make = function (_elm) {
    $Html$Events = Elm.Html.Events.make(_elm),
    $List = Elm.List.make(_elm),
    $Manifests$Actions = Elm.Manifests.Actions.make(_elm),
-   $Manifests$Models = Elm.Manifests.Models.make(_elm),
-   $Manifests$Utils = Elm.Manifests.Utils.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
    $Result = Elm.Result.make(_elm),
    $Signal = Elm.Signal.make(_elm);
    var _op = {};
-   var manifestEdit = F2(function (address,manifest) {
-      var _p0 = A2($Debug.log,"manifest",manifest);
-      if (_p0.ctor === "Nothing") {
-            return A2($Html.div,
-            _U.list([A2($Html$Events.onClick,
-            address,
-            $Manifests$Actions.NoOp)]),
-            _U.list([$Html.text("not found")]));
-         } else {
-            var _p1 = _p0._0;
-            return A2($Html.div,
-            _U.list([]),
-            _U.list([A2($Html.input,
-                    _U.list([$Html$Attributes.type$("text")
-                            ,$Html$Attributes.placeholder("Name")
-                            ,$Html$Attributes.value(_p1.name)
-                            ,$Html$Attributes.name("name")
-                            ,$Html$Attributes.autofocus(true)]),
-                    _U.list([]))
-                    ,A2($Html.input,
-                    _U.list([$Html$Attributes.type$("text")
-                            ,$Html$Attributes.placeholder("display name")
-                            ,$Html$Attributes.value(A2($Maybe.withDefault,
-                            "",
-                            _p1.displayName))
-                            ,$Html$Attributes.name("DisplayName")
-                            ,$Html$Attributes.autofocus(false)
-                            ,A2($Manifests$Utils.onInput,
-                            address,
-                            $Manifests$Actions.UpdateDisplayName)]),
-                    _U.list([]))
-                    ,A2($Html.button,
-                    _U.list([$Html$Attributes.$class("save")
-                            ,A2($Html$Events.onClick,
-                            address,
-                            $Manifests$Actions.Save(_p1))]),
-                    _U.list([$Html.text("save")]))
-                    ,A2($Html.button,
-                    _U.list([$Html$Attributes.$class("discard")
-                            ,A2($Html$Events.onClick,
-                            address,
-                            $Manifests$Actions.DiscardSave)]),
-                    _U.list([$Html.text("discard")]))]));
-         }
-   });
-   var defaultManifest = {name: "foo"
-                         ,catalogs: $Maybe.Nothing
-                         ,displayName: $Maybe.Nothing};
    var firstCatalog = function (catalogs) {
-      var _p2 = catalogs;
-      if (_p2.ctor === "Just") {
-            return A2($Maybe.withDefault,"",$List.head(_p2._0));
+      var _p0 = catalogs;
+      if (_p0.ctor === "Just") {
+            return A2($Maybe.withDefault,"",$List.head(_p0._0));
          } else {
             return "";
          }
@@ -14245,9 +14607,136 @@ Elm.Manifests.View.make = function (_elm) {
                                        ,firstCatalog: firstCatalog
                                        ,manifestRow: manifestRow
                                        ,manifestCollection: manifestCollection
-                                       ,manifestView: manifestView
-                                       ,defaultManifest: defaultManifest
-                                       ,manifestEdit: manifestEdit};
+                                       ,manifestView: manifestView};
+};
+Elm.Manifests = Elm.Manifests || {};
+Elm.Manifests.SingleView = Elm.Manifests.SingleView || {};
+Elm.Manifests.SingleView.make = function (_elm) {
+   "use strict";
+   _elm.Manifests = _elm.Manifests || {};
+   _elm.Manifests.SingleView = _elm.Manifests.SingleView || {};
+   if (_elm.Manifests.SingleView.values)
+   return _elm.Manifests.SingleView.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Html = Elm.Html.make(_elm),
+   $Html$Attributes = Elm.Html.Attributes.make(_elm),
+   $Html$Events = Elm.Html.Events.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Manifests$Actions = Elm.Manifests.Actions.make(_elm),
+   $Manifests$Models = Elm.Manifests.Models.make(_elm),
+   $Manifests$Utils = Elm.Manifests.Utils.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var _op = {};
+   var catalogRow = F2(function (address,catalog) {
+      return A2($Html.div,
+      _U.list([$Html$Attributes.$class("catalogrow")]),
+      _U.list([A2($Html.input,
+              _U.list([$Html$Attributes.type$("checkbox")
+                      ,$Html$Attributes.checked(true)]),
+              _U.list([]))
+              ,$Html.text(catalog)]));
+   });
+   var catalogView = F2(function (address,manifest) {
+      var catalogItems = A2($List.map,
+      catalogRow(address),
+      A2($Maybe.withDefault,_U.list([]),manifest.catalogs));
+      return A2($Html.div,_U.list([]),catalogItems);
+   });
+   var manifestView = F2(function (address,manifest) {
+      return A2($Html.div,
+      _U.list([]),
+      _U.list([$Html.text("Name:")
+              ,A2($Html.input,
+              _U.list([$Html$Attributes.type$("text")
+                      ,$Html$Attributes.placeholder("Name")
+                      ,$Html$Attributes.value(manifest.name)
+                      ,$Html$Attributes.name("name")
+                      ,$Html$Attributes.autofocus(true)]),
+              _U.list([]))
+              ,$Html.text("Display name")
+              ,A2($Html.input,
+              _U.list([$Html$Attributes.type$("text")
+                      ,$Html$Attributes.placeholder("display name")
+                      ,$Html$Attributes.value(A2($Maybe.withDefault,
+                      "",
+                      manifest.displayName))
+                      ,$Html$Attributes.name("DisplayName")
+                      ,$Html$Attributes.autofocus(false)
+                      ,A2($Manifests$Utils.onInput,
+                      address,
+                      $Manifests$Actions.UpdateDisplayName)]),
+              _U.list([]))
+              ,$Html.text("User:")
+              ,A2($Html.input,
+              _U.list([$Html$Attributes.type$("text")
+                      ,$Html$Attributes.value(A2($Maybe.withDefault,"",manifest.user))
+                      ,$Html$Attributes.name("user")]),
+              _U.list([]))
+              ,$Html.text("Notes:")
+              ,A2($Html.input,
+              _U.list([$Html$Attributes.type$("text")
+                      ,$Html$Attributes.value(A2($Maybe.withDefault,
+                      "",
+                      manifest.notes))
+                      ,$Html$Attributes.name("notes")]),
+              _U.list([]))
+              ,$Html.text("Catalogs:")
+              ,A2(catalogView,address,manifest)
+              ,A2($Html.button,
+              _U.list([$Html$Attributes.$class("save")
+                      ,A2($Html$Events.onClick,
+                      address,
+                      $Manifests$Actions.Save(manifest))]),
+              _U.list([$Html.text("save")]))
+              ,A2($Html.button,
+              _U.list([$Html$Attributes.$class("discard")
+                      ,A2($Html$Events.onClick,
+                      address,
+                      $Manifests$Actions.DiscardSave)]),
+              _U.list([$Html.text("discard")]))]));
+   });
+   var formScreen = F2(function (address,manifest) {
+      return A2($Html.div,
+      _U.list([$Html$Attributes.$class("form-box")]),
+      _U.list([A2(manifestView,address,manifest)]));
+   });
+   var editPage = F2(function (address,manifest) {
+      return A2($Html.div,
+      _U.list([$Html$Attributes.$class("manifest-menu")]),
+      _U.list([A2($Html.h1,
+              _U.list([]),
+              _U.list([$Html.text("General")]))
+              ,A2($Html.h1,
+              _U.list([]),
+              _U.list([$Html.text("Included Manifests")]))
+              ,A2($Html.h1,
+              _U.list([]),
+              _U.list([$Html.text("Referencing Manifests")]))
+              ,A2(formScreen,address,manifest)]));
+   });
+   var manifestEdit = F2(function (address,manifest) {
+      var _p0 = A2($Debug.log,"manifest",manifest);
+      if (_p0.ctor === "Nothing") {
+            return A2($Html.div,
+            _U.list([A2($Html$Events.onClick,
+            address,
+            $Manifests$Actions.NoOp)]),
+            _U.list([$Html.text("not found")]));
+         } else {
+            return A2(editPage,address,_p0._0);
+         }
+   });
+   return _elm.Manifests.SingleView.values = {_op: _op
+                                             ,manifestEdit: manifestEdit
+                                             ,catalogRow: catalogRow
+                                             ,catalogView: catalogView
+                                             ,editPage: editPage
+                                             ,formScreen: formScreen
+                                             ,manifestView: manifestView};
 };
 Elm.View = Elm.View || {};
 Elm.View.make = function (_elm) {
@@ -14259,6 +14748,7 @@ Elm.View.make = function (_elm) {
    $Debug = Elm.Debug.make(_elm),
    $Html = Elm.Html.make(_elm),
    $List = Elm.List.make(_elm),
+   $Manifests$SingleView = Elm.Manifests.SingleView.make(_elm),
    $Manifests$View = Elm.Manifests.View.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
    $Models = Elm.Models.make(_elm),
@@ -14268,6 +14758,7 @@ Elm.View.make = function (_elm) {
    $Update = Elm.Update.make(_elm);
    var _op = {};
    var pageView = F2(function (address,model) {
+      var log = A2($Debug.log,"route type",model.routing.route);
       var _p0 = model.routing.route;
       switch (_p0.ctor)
       {case "AdminHome": return A2($Html.div,
@@ -14289,9 +14780,9 @@ Elm.View.make = function (_elm) {
            _U.list([A2($Html.h2,
            _U.list([]),
            _U.list([$Html.text("Not found")]))]));
-         default: return A2($Manifests$View.manifestEdit,
+         default: return A2($Manifests$SingleView.manifestEdit,
            A2($Signal.forwardTo,address,$Update.ManifestAction),
-           A2($Debug.log,"model",model.manifestForm));}
+           A2($Debug.log,"edit-model",model.manifestForm));}
    });
    var view = F2(function (address,model) {
       return A2(pageView,address,model);
@@ -14307,10 +14798,10 @@ Elm.Main.make = function (_elm) {
    if (_elm.Main.values) return _elm.Main.values;
    var _U = Elm.Native.Utils.make(_elm),
    $Basics = Elm.Basics.make(_elm),
+   $Client$Http = Elm.Client.Http.make(_elm),
    $Debug = Elm.Debug.make(_elm),
    $Effects = Elm.Effects.make(_elm),
    $List = Elm.List.make(_elm),
-   $Manifests$Update = Elm.Manifests.Update.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
    $Models = Elm.Models.make(_elm),
    $Result = Elm.Result.make(_elm),
@@ -14328,7 +14819,7 @@ Elm.Main.make = function (_elm) {
    var init = function () {
       var fxs = _U.list([A2($Effects.map,
       $Update.ManifestAction,
-      $Manifests$Update.getManifests)]);
+      $Client$Http.getManifests)]);
       var fx = $Effects.batch(fxs);
       return {ctor: "_Tuple2"
              ,_0: {manifests: _U.list([])

@@ -4,9 +4,11 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Manifests.Actions exposing (..)
-import Routing
 import Manifests.Models exposing (Manifest)
 import Manifests.Utils exposing (onInput)
+
+
+-- VIEW a collection of manifests
 
 
 firstCatalog : Maybe (List String) -> String
@@ -37,6 +39,7 @@ manifestRow address manifest =
         [ text (firstCatalog manifest.catalogs)
         ]
     , button [ onClick address (EditManifest manifest.name) ] [ text "edit" ]
+      -- , button [ onClick address (DeleteManifest manifest.name) ] [ text "delete" ]
     ]
 
 
@@ -82,42 +85,3 @@ manifestView address manifests =
         [ id "container" ]
         [ manifestCollection address manifests ]
     ]
-
-
-defaultManifest : Manifest
-defaultManifest =
-  { name = "foo"
-  , catalogs = Nothing
-  , displayName = Nothing
-  }
-
-
-manifestEdit : Signal.Address Action -> Maybe Manifest -> Html
-manifestEdit address manifest =
-  case (Debug.log "manifest" manifest) of
-    Nothing ->
-      div [ onClick address NoOp ] [ text "not found" ]
-
-    Just manifest ->
-      div
-        []
-        [ input
-            [ type' "text"
-            , placeholder "Name"
-            , value manifest.name
-            , name "name"
-            , autofocus True
-            ]
-            []
-        , input
-            [ type' "text"
-            , placeholder "display name"
-            , value (Maybe.withDefault "" manifest.displayName)
-            , name "DisplayName"
-            , autofocus False
-            , onInput address UpdateDisplayName
-            ]
-            []
-        , button [ class "save", onClick address (Save manifest) ] [ text "save" ]
-        , button [ class "discard", onClick address DiscardSave ] [ text "discard" ]
-        ]

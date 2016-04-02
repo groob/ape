@@ -6,6 +6,7 @@ import Manifests.Models exposing (..)
 
 type Action
   = GetManifests (Result Http.Error (List Manifest))
+  | GetManifest (Maybe Manifest)
   | EditManifest String
   | DiscardSave
   | UpdateDisplayName String
@@ -13,3 +14,4 @@ type Action
   | SortBy String
   | HopAction ()
   | NoOp
+  | DeleteManifest String

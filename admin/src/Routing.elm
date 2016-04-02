@@ -6,6 +6,8 @@ import Hop
 import Hop.Types exposing (Location, PathMatcher, Router, newLocation)
 import Hop.Navigate exposing (navigateTo)
 import Hop.Matchers exposing (match1, match2, match3, str)
+import Client.Http exposing (getManifest)
+import Manifests.Update
 
 
 type Route
@@ -42,7 +44,12 @@ update action model =
       ( model, Effects.map HopAction (navigateTo path) )
 
     ApplyRoute ( route, location ) ->
-      ( { model | route = route, location = location }, Effects.none )
+      case route of
+        ManifestEditRoute name ->
+          ( { model | route = route, location = location }, Effects.none )
+
+        _ ->
+          ( { model | route = route, location = location }, Effects.none )
 
     HopAction () ->
       ( model, Effects.none )

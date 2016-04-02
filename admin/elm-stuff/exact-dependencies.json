@@ -2,6 +2,7 @@
     "evancz/elm-effects": "2.0.1",
     "maxsnew/lazy": "1.1.0",
     "sporto/hop": "3.0.0",
+    "circuithub/elm-json-extra": "2.2.1",
     "evancz/virtual-dom": "2.1.0",
     "evancz/elm-http": "3.0.0",
     "elm-community/elm-history": "1.0.1",
