@@ -41,7 +41,7 @@ func (r *SimpleRepo) saveCatalog(name string, catalogs *models.Catalogs) error {
 	if _, err := os.Stat(catalogsPath); err != nil {
 		file, err = os.Create(catalogsPath)
 	} else {
-		file, err = os.OpenFile(catalogsPath, os.O_WRONLY, 0755)
+		file, err = os.OpenFile(catalogsPath, os.O_TRUNC|os.O_WRONLY, 0755)
 	}
 	if err != nil {
 		return err
