@@ -16,7 +16,9 @@ type PkgsInfo struct {
 	pkgsinfo
 	Filename string   `plist:"-" json:"-"`
 	Metadata metadata `plist:"_metadata,omitempty" json:"_metadata,omitempty"`
+	adobeRelatedItems
 }
+
 type pkgsinfo struct {
 	Autoremove               bool                  `plist:"autoremove,omitempty" json:"autoremove,omitempty"`
 	Catalogs                 []string              `plist:"catalogs,omitempty" json:"catalogs,omitempty"`
@@ -110,7 +112,23 @@ type installerChoicesXML struct {
 	ChoiceIdentifier string `plist:"choiceIdentifier,omitempty" json:"choiceIdentifier,omitempty"`
 }
 
-// TODO Adobe Related Items and adebe_install_info
+type adobeRelatedItems struct {
+	AdobeSetupType string                   `plist:"AdobeSetupType,omitempty" json:"AdobeSetupType,omitempty"`
+	Payloads       []map[string]interface{} `plist:"payloads,omitempty" json:"payloads,omitempty"`
+	// Only available in CS, not CC
+	AdobeInstallInfo adobeInstallInfo `plist:"adobe_install_info,omitempty" json:"adobe_install_info,omitempty"`
+}
+
+type adobeInstallInfo struct {
+	SerialNumber         string `plist:"serialnumber,omitempty" json:"serialnumber,omitempty"`
+	InstallXML           string `plist:"installxml,omitempty" json:"installxml,omitempty"`
+	UninstallXML         string `plist:"uninstallxml,omitempty" json:"uninstallxml,omitempty"`
+	MediaSignature       string `plist:"media_signature,omitempty" json:"media_signature,omitempty"`
+	MediaDigest          string `plist:"media_digest,omitempty" json:"media_signature,omitempty"`
+	PayloadCount         int    `plist:"payload_count,omitempty" json:"payload_count,omitempty"`
+	SuppressRegistration bool   `plist:"suppress_registration,omitempty" json:"suppress_registration,omitempty"`
+	SuppressUpdates      bool   `plist:"suppress_updates,omitempty" json:"suppress_updates,omitempty"`
+}
 
 // View returns an API view
 func (p *PkgsInfo) View(accept string) (*Response, error) {
